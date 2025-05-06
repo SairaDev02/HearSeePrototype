@@ -43,20 +43,25 @@ def image_to_base64(image):
         return None
 
 def chat_response(message, history, performance_metrics):
-    """Process user message using Replicate LLM"""
     # Check if API is available first
     api_available, error_msg = verify_api_available()
     if not api_available:
-        return error_msg if not history else history + [[message, error_msg]], performance_metrics
+        if not history:
+            # Return a properly formatted history list
+            return [[message, error_msg]], performance_metrics
+        else:
+            # Append to existing history with proper list format
+            return history + [[message, error_msg]], performance_metrics
 
     if not message or message.strip() == "":
-        return "Please enter a message." if not history else history, performance_metrics
-
+        # Return unchanged history
+        return history, performance_metrics
+    
     try:
         # Start measuring time
         start_time = time.time()
         first_token_time = None
-
+        
         # Build system prompt from chat history
         system_prompt = "You are a helpful AI assistant specializing in analyzing images and providing detailed information."
         # Convert history to context for the LLM
@@ -79,36 +84,44 @@ def chat_response(message, history, performance_metrics):
         # Process the streamed output
         result = ""
         token_count = 0
-
+        
         for token in output_iterator:
             if first_token_time is None and token:
                 first_token_time = time.time()  # Record time of first token
-
+            
             if token:
                 result += token
                 token_count += 1
-
+        
         # Calculate end time and metrics
         end_time = time.time()
         total_time = end_time - start_time
         latency = total_time  # Overall latency
-
+        
         # Calculate time to first token if we received tokens
         ttft = "N/A"
         if first_token_time is not None:
             ttft = f"{(first_token_time - start_time):.2f}s"
-
+        
         # Calculate tokens per second
         tps = "N/A"
         if token_count > 0 and total_time > 0:
             tps = f"{token_count / total_time:.2f}"
-
+        
         # Update performance metrics
         updated_metrics = f"Tokens/sec: {tps} | Time to first token: {ttft} | Latency: {latency:.2f}s"
-
-        return result, updated_metrics
+        
+        # Return properly formatted chat history
+        if not history:
+            return [[message, result]], updated_metrics
+        else:
+            return history + [[message, result]], updated_metrics
     except Exception as e:
-        return f"Sorry, I encountered an error: {str(e)}", "Error: Metrics unavailable"
+        error_msg = f"Sorry, I encountered an error: {str(e)}"
+        if not history:
+            return [[message, error_msg]], "Error: Metrics unavailable"
+        else:
+            return history + [[message, error_msg]], "Error: Metrics unavailable"
 
 def extract_text(image, history=None):
     """Extract text from image using Qwen 2 VL model"""
@@ -282,16 +295,18 @@ def text_to_speech(text, voice_type, speed):
         return None, "No text to convert to speech."
 
     try:
+        # Updated voice map based on the error message's supported voices
         voice_map = {
-            "Female Heart (American)": "af_heart",
-            "Female Bella (American)": "af_bella",
-            "Female Emma (British)": "bf_emma",
-            "Male Michael (American)": "am_michael",
-            "Male Fenrir (American)": "am_fenrir",
-            "Male George (British)": "bm_george"
+            "Female Heart (American)": "af_nova",     # Changed from af_heart to af_nova
+            "Female Bella (American)": "af_bella",    # This one is still valid
+            "Female Emma (British)": "bf_emma",       # This one is still valid
+            "Male Michael (American)": "am_michael",  # This one is still valid
+            "Male Fenrir (American)": "am_fenrir",    # This one is still valid
+            "Male George (British)": "bm_george"      # This one is still valid
         }
 
-        voice_id = voice_map.get(voice_type, "af_heart")  # Default to female American voice
+        # Get the voice ID, with updated fallback
+        voice_id = voice_map.get(voice_type, "af_nova")  # Default to female American voice (updated)
 
         # Validate speed is within acceptable range
         safe_speed = max(0.5, min(2.0, float(speed)))
@@ -327,6 +342,10 @@ def create_chat_interface():
         ["What kind of images can I upload?", "You can upload most common image formats (JPG, PNG, etc.). Once uploaded, I can help you with:\n- Extracting text from the image\n- Generating image captions\n- Providing detailed image summaries\n I can also convert text to speech for you."],
         ["That sounds great!", "Feel free to upload an image whenever you're ready. I'm here to help! 😊"]
     ]
+    
+    # Status indicator for showing processing state
+    processing_status = gr.State(value=False)
+    
     with gr.Column():
         # Add styles using elem_classes
         chatbot = gr.Chatbot(
@@ -344,8 +363,24 @@ def create_chat_interface():
                 padding: 10px !important;
                 background-color: #f9f9f9 !important;
             }
+            /* Add loading indicator style */
+            .processing-indicator {
+                color: #ff5500;
+                font-weight: bold;
+                padding: 5px;
+                border-radius: 4px;
+                background-color: #fff3e0;
+                display: inline-block;
+                margin-top: 5px;
+            }
             </style>
         """)
+
+        # Processing indicator
+        processing_indicator = gr.HTML(
+            visible=False,
+            value="<div class='processing-indicator'>⏳ Processing... Please wait.</div>"
+        )
 
         with gr.Row():
             msg = gr.Textbox(
@@ -397,8 +432,11 @@ def create_chat_interface():
             with gr.Column(scale=1):
                 tts_btn = gr.Button("🔊 Play Last Response")
 
-        # Audio output component
-        audio_output = gr.Audio(label="Generated Speech")
+        # Audio output component - configured for playback only
+        audio_output = gr.Audio(
+            label="Generated Speech",
+            interactive=False  # Prevent interaction for uploads
+            )
 
         # Put TTS Status and Performance Metrics in the same row
         with gr.Row():
@@ -416,30 +454,211 @@ def create_chat_interface():
                 scale=3
             )
 
-        # Event handlers for chat
-        msg.submit(chat_response, [msg, chatbot, performance_metrics], [chatbot, performance_metrics], api_name="chat")
-        send_btn.click(chat_response, [msg, chatbot, performance_metrics], [chatbot, performance_metrics])
+        # Helper functions to handle input disabling/enabling
+        def start_processing():
+            """Set processing state to True and show indicator"""
+            return {
+                processing_indicator: gr.update(visible=True),
+                msg: gr.update(interactive=False),
+                send_btn: gr.update(interactive=False),
+                upload_btn: gr.update(interactive=False),
+                extract_btn: gr.update(interactive=False),
+                caption_btn: gr.update(interactive=False),
+                summarize_btn: gr.update(interactive=False),
+                regenerate_btn: gr.update(interactive=False),
+                tts_btn: gr.update(interactive=False),
+                processing_status: True
+            }
+            
+        def end_processing(chatbot_val, metrics_val):
+            """Set processing state to False and hide indicator"""
+            return {
+                chatbot: chatbot_val,
+                performance_metrics: metrics_val,
+                processing_indicator: gr.update(visible=False),
+                msg: gr.update(interactive=True),
+                send_btn: gr.update(interactive=True),
+                upload_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=True),
+                caption_btn: gr.update(interactive=True),
+                summarize_btn: gr.update(interactive=True),
+                regenerate_btn: gr.update(interactive=True),
+                tts_btn: gr.update(interactive=True),
+                processing_status: False
+            }
+            
+        def end_processing_image(chatbot_val):
+            """End processing specifically for image operations"""
+            return {
+                chatbot: chatbot_val,
+                processing_indicator: gr.update(visible=False),
+                msg: gr.update(interactive=True),
+                send_btn: gr.update(interactive=True),
+                upload_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=True),
+                caption_btn: gr.update(interactive=True),
+                summarize_btn: gr.update(interactive=True),
+                regenerate_btn: gr.update(interactive=True),
+                tts_btn: gr.update(interactive=True),
+                processing_status: False
+            }
+            
+        def end_processing_tts(audio_val, status_val):
+            """End processing specifically for TTS operations"""
+            return {
+                audio_output: audio_val,
+                tts_status: status_val,
+                processing_indicator: gr.update(visible=False),
+                msg: gr.update(interactive=True),
+                send_btn: gr.update(interactive=True),
+                upload_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=True),
+                caption_btn: gr.update(interactive=True),
+                summarize_btn: gr.update(interactive=True),
+                regenerate_btn: gr.update(interactive=True),
+                tts_btn: gr.update(interactive=True),
+                processing_status: False
+            }
+
+        # Event handlers with locking mechanism
+        def locked_chat_response(message, history, performance_metrics):
+        # chat_response now returns updated history and metrics
+            updated_history, updated_metrics = chat_response(message, history, performance_metrics)
+            return updated_history, updated_metrics, ""  # Clear the input field
+        
+        # Modified clear function to reset and enable all inputs
+        def clear_chat():
+            return {
+                chatbot: [],
+                performance_metrics: "Tokens/sec: N/A | Time to first token: N/A | Latency: N/A",
+                processing_indicator: gr.update(visible=False),
+                msg: gr.update(interactive=True, value=""),
+                send_btn: gr.update(interactive=True),
+                upload_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=True),
+                caption_btn: gr.update(interactive=True),
+                summarize_btn: gr.update(interactive=True),
+                regenerate_btn: gr.update(interactive=True),
+                tts_btn: gr.update(interactive=True),
+                processing_status: False
+            }
+
+        # Connect event handlers with input locking
+        # Each handler first disables inputs, then processes, then re-enables inputs
+        
+        # Chat response with message clearing
+        send_handler = msg.submit(
+            fn=start_processing,  # First disable all inputs
+            inputs=None,
+            outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        ).then(
+            fn=locked_chat_response,  # Then process the request
+            inputs=[msg, chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, msg]
+        ).then(
+            fn=end_processing,  # Finally re-enable all inputs
+            inputs=[chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        )
+        
+        # Same setup for button click
+        send_btn.click(
+            fn=start_processing,
+            inputs=None,
+            outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        ).then(
+            fn=locked_chat_response,
+            inputs=[msg, chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, msg]
+        ).then(
+            fn=end_processing,
+            inputs=[chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        )
+        
+        # Handle image upload (no need to lock inputs during upload)
         upload_btn.upload(lambda x: x, upload_btn, image_output)
-
-        # Reset performance metrics when clearing history
-        clear_btn.click(lambda: ([], "Tokens/sec: N/A | Time to first token: N/A | Latency: N/A"),
-                         None,
-                         [chatbot, performance_metrics],
-                         queue=False)
-
-        # Use the improved regenerate function with performance metrics
-        regenerate_btn.click(regenerate_response, [chatbot, performance_metrics], [chatbot, performance_metrics])
-
-        # Event handlers for image processing
-        extract_btn.click(extract_text, inputs=[image_output, chatbot], outputs=[chatbot])
-        caption_btn.click(caption_image, inputs=[image_output, chatbot], outputs=[chatbot])
-        summarize_btn.click(summarize_image, inputs=[image_output, chatbot], outputs=[chatbot])
-
-        # Event handler for TTS
+        
+        # Clear button with full reset
+        clear_btn.click(
+            fn=clear_chat,
+            inputs=None,
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        )
+        
+        # Regenerate with locking
+        regenerate_btn.click(
+            fn=start_processing,
+            inputs=None,
+            outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        ).then(
+            fn=regenerate_response,
+            inputs=[chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics]
+        ).then(
+            fn=end_processing,
+            inputs=[chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        )
+        
+        # Extract text with locking
+        extract_btn.click(
+            fn=start_processing,
+            inputs=None,
+            outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        ).then(
+            fn=extract_text,
+            inputs=[image_output, chatbot],
+            outputs=[chatbot]
+        ).then(
+            fn=end_processing_image,
+            inputs=[chatbot],
+            outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        )
+        
+        # Caption image with locking
+        caption_btn.click(
+            fn=start_processing,
+            inputs=None,
+            outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        ).then(
+            fn=caption_image,
+            inputs=[image_output, chatbot],
+            outputs=[chatbot]
+        ).then(
+            fn=end_processing_image,
+            inputs=[chatbot],
+            outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        )
+        
+        # Summarize image with locking
+        summarize_btn.click(
+            fn=start_processing,
+            inputs=None,
+            outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        ).then(
+            fn=summarize_image,
+            inputs=[image_output, chatbot],
+            outputs=[chatbot]
+        ).then(
+            fn=end_processing_image,
+            inputs=[chatbot],
+            outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        )
+        
+        # TTS with locking
         tts_btn.click(
+            fn=start_processing,
+            inputs=None,
+            outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+        ).then(
             fn=lambda history, voice, speed: text_to_speech(get_last_bot_message(history), voice, speed),
             inputs=[chatbot, voice_type, speed],
             outputs=[audio_output, tts_status]
+        ).then(
+            fn=end_processing_tts,
+            inputs=[audio_output, tts_status],
+            outputs=[audio_output, tts_status, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
 
 def create_guide_interface():
@@ -451,6 +670,7 @@ def create_guide_interface():
     ### Basic Chat
     - Type your message in the text box and press Enter or click Send
     - The chatbot will respond to your messages
+    - All inputs are automatically disabled while the AI is processing to prevent multiple submissions
 
     ### Image Features (Powered by Qwen 2 VL 7B)
     1. **Upload Image**: Click to upload an image file
@@ -481,14 +701,6 @@ def create_guide_interface():
 with gr.Blocks(theme=gr.themes.Soft()) as demo:
     gr.Markdown("# Interactive Chat Application with AI Vision and Voice")
 
-    with gr.Tabs():
-        with gr.Tab("Chat"):
-            create_chat_interface()
-        with gr.Tab("Guide"):
-            create_guide_interface()
-
-if __name__ == "__main__":
-    demo.launch()
     with gr.Tabs():
         with gr.Tab("Chat"):
             create_chat_interface()
