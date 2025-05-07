@@ -56,12 +56,12 @@ def chat_response(message, history, performance_metrics):
     if not message or message.strip() == "":
         # Return unchanged history
         return history, performance_metrics
-    
+
     try:
         # Start measuring time
         start_time = time.time()
         first_token_time = None
-        
+
         # Build system prompt from chat history
         system_prompt = "You are a helpful AI assistant specializing in analyzing images and providing detailed information."
         # Convert history to context for the LLM
@@ -84,33 +84,33 @@ def chat_response(message, history, performance_metrics):
         # Process the streamed output
         result = ""
         token_count = 0
-        
+
         for token in output_iterator:
             if first_token_time is None and token:
                 first_token_time = time.time()  # Record time of first token
-            
+
             if token:
                 result += token
                 token_count += 1
-        
+
         # Calculate end time and metrics
         end_time = time.time()
         total_time = end_time - start_time
         latency = total_time  # Overall latency
-        
+
         # Calculate time to first token if we received tokens
         ttft = "N/A"
         if first_token_time is not None:
             ttft = f"{(first_token_time - start_time):.2f}s"
-        
+
         # Calculate tokens per second
         tps = "N/A"
         if token_count > 0 and total_time > 0:
             tps = f"{token_count / total_time:.2f}"
-        
+
         # Update performance metrics
         updated_metrics = f"Tokens/sec: {tps} | Time to first token: {ttft} | Latency: {latency:.2f}s"
-        
+
         # Return properly formatted chat history
         if not history:
             return [[message, result]], updated_metrics
@@ -342,10 +342,10 @@ def create_chat_interface():
         ["What kind of images can I upload?", "You can upload most common image formats (JPG, PNG, etc.). Once uploaded, I can help you with:\n- Extracting text from the image\n- Generating image captions\n- Providing detailed image summaries\n I can also convert text to speech for you."],
         ["That sounds great!", "Feel free to upload an image whenever you're ready. I'm here to help! 😊"]
     ]
-    
+
     # Status indicator for showing processing state
     processing_status = gr.State(value=False)
-    
+
     with gr.Column():
         # Add styles using elem_classes
         chatbot = gr.Chatbot(
@@ -401,12 +401,25 @@ def create_chat_interface():
             caption_btn = gr.Button("💭 Caption Image")
             summarize_btn = gr.Button("📋 Summarize Image")
 
-        # Store uploaded image
-        image_output = gr.Image(type="numpy", visible=False)
+        # Store uploaded image and display gallery
+        with gr.Row():
+            # Column for the image output (hidden, for processing)
+            with gr.Column(scale=1, visible=False):
+                image_output = gr.Image(type="numpy")
+
+            # Column for the gallery to display uploaded images
+            with gr.Column(scale=1):
+                gallery = gr.Gallery(
+                    label="Uploaded Image",
+                    show_label=True,
+                    elem_id="image-gallery",
+                    columns=1,
+                    height=300,
+                    object_fit="contain"
+                )
 
         # Add Text-to-Speech section
         gr.Markdown("### Text-to-Speech Options")
-
         with gr.Row():
             with gr.Column(scale=3):
                 voice_type = gr.Dropdown(
@@ -469,7 +482,7 @@ def create_chat_interface():
                 tts_btn: gr.update(interactive=False),
                 processing_status: True
             }
-            
+
         def end_processing(chatbot_val, metrics_val):
             """Set processing state to False and hide indicator"""
             return {
@@ -486,7 +499,7 @@ def create_chat_interface():
                 tts_btn: gr.update(interactive=True),
                 processing_status: False
             }
-            
+
         def end_processing_image(chatbot_val):
             """End processing specifically for image operations"""
             return {
@@ -502,7 +515,7 @@ def create_chat_interface():
                 tts_btn: gr.update(interactive=True),
                 processing_status: False
             }
-            
+
         def end_processing_tts(audio_val, status_val):
             """End processing specifically for TTS operations"""
             return {
@@ -525,7 +538,7 @@ def create_chat_interface():
         # chat_response now returns updated history and metrics
             updated_history, updated_metrics = chat_response(message, history, performance_metrics)
             return updated_history, updated_metrics, ""  # Clear the input field
-        
+
         # Modified clear function to reset and enable all inputs
         def clear_chat():
             return {
@@ -545,7 +558,7 @@ def create_chat_interface():
 
         # Connect event handlers with input locking
         # Each handler first disables inputs, then processes, then re-enables inputs
-        
+
         # Chat response with message clearing
         send_handler = msg.submit(
             fn=start_processing,  # First disable all inputs
@@ -560,7 +573,7 @@ def create_chat_interface():
             inputs=[chatbot, performance_metrics],
             outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
-        
+
         # Same setup for button click
         send_btn.click(
             fn=start_processing,
@@ -575,17 +588,17 @@ def create_chat_interface():
             inputs=[chatbot, performance_metrics],
             outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
-        
-        # Handle image upload (no need to lock inputs during upload)
-        upload_btn.upload(lambda x: x, upload_btn, image_output)
-        
+
+        # Handle image upload
+        upload_btn.upload(lambda x: (x, [x] if x is not None else []), upload_btn, [image_output, gallery])
+
         # Clear button with full reset
         clear_btn.click(
             fn=clear_chat,
             inputs=None,
             outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
-        
+
         # Regenerate with locking
         regenerate_btn.click(
             fn=start_processing,
@@ -600,7 +613,7 @@ def create_chat_interface():
             inputs=[chatbot, performance_metrics],
             outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
-        
+
         # Extract text with locking
         extract_btn.click(
             fn=start_processing,
@@ -615,7 +628,7 @@ def create_chat_interface():
             inputs=[chatbot],
             outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
-        
+
         # Caption image with locking
         caption_btn.click(
             fn=start_processing,
@@ -630,7 +643,7 @@ def create_chat_interface():
             inputs=[chatbot],
             outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
-        
+
         # Summarize image with locking
         summarize_btn.click(
             fn=start_processing,
@@ -645,7 +658,7 @@ def create_chat_interface():
             inputs=[chatbot],
             outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
-        
+
         # TTS with locking
         tts_btn.click(
             fn=start_processing,
