@@ -44,59 +44,73 @@ def image_to_base64(image):
         print(f"Error converting image to base64: {e}")
         return None
 
-def chat_response(message, history, performance_metrics):
+# Update the chat_response function signature to accept an image parameter
+def chat_response(message, history, performance_metrics, image=None):
     # Check if API is available first
     api_available, error_msg = verify_api_available()
     if not api_available:
         if not history:
-            # Return a properly formatted history list
             return [[message, error_msg]], performance_metrics
         else:
-            # Append to existing history with proper list format
+            return history + [[message, error_msg]], performance_metrics
+
+    # Add strict image requirement check
+    if image is None:
+        error_msg = "An image is required. Please upload an image before sending a message."
+        if not history:
+            return [[message, error_msg]], performance_metrics
+        else:
             return history + [[message, error_msg]], performance_metrics
 
     if not message or message.strip() == "":
-        # Return unchanged history
         return history, performance_metrics
 
     try:
-        # Start measuring time for latency calculation
+        # Start measuring time
         start_time = time.time()
+
         # Build system prompt from chat history
         system_prompt = "You are a helpful AI assistant specializing in analyzing images and providing detailed information."
         # Convert history to context for the LLM
         context = ""
         for h in history:
-            if h[0] is not None:  # Check if user message exists
+            if h[0] is not None:
                 context += f"User: {h[0]}\nAssistant: {h[1]}\n\n"
 
-        # Call Qwen model for text chat - FIXED: Removed streaming
+        # Set up the API call parameters
+        api_params = {
+            "prompt": f"{system_prompt}\n\nConversation History:\n{context}\nUser: {message}\nAssistant:",
+            "max_new_tokens": 512,
+        }
+
+        # Add image to API params if provided
+        if image is not None:
+            # Convert image to base64
+            img_str = image_to_base64(image)
+            if img_str:
+                api_params["media"] = f"data:image/png;base64,{img_str}"
+
+        # Call Qwen model
         output = replicate.run(
             QWEN_VL_MODEL,
-            input={
-                "prompt": f"{system_prompt}\n\nConversation History:\n{context}\nUser: {message}\nAssistant:",
-                "max_new_tokens": 512
-            }
+            input=api_params
         )
 
-        # Process the output (now non-streaming)
+        # Process the output
         if isinstance(output, list):
             result = "".join(output)
         else:
             result = output
 
-        # Calculate token count (approximate by splitting on spaces)
-        token_count = len(result.split())
-        # Calculate end time and metrics
-        end_time = time.time()
+        # Calculate word count
+        word_count = len(result.split())
 
-        # Calculate latency according to the definition:
-        # "The average duration of processing time in seconds between the
-        # submission of a request query and the receipt of a response"
+        # Calculate metrics
+        end_time = time.time()
         latency = end_time - start_time
 
-        # Update performance metrics with clear latency indication
-        updated_metrics = f"Latency: {latency:.2f}s | Tokens: {token_count}"
+        # Update performance metrics
+        updated_metrics = f"Latency: {latency:.2f}s | Tokens: {word_count}"
 
         # Return properly formatted chat history
         if not history:
@@ -246,28 +260,29 @@ def summarize_image(image, history=None):
         else:
             return history + [[None, error_message]]
 
-def regenerate_response(history, performance_metrics):
+def regenerate_response(history, performance_metrics, image=None):
     """Actually regenerate the last bot message by re-running the model"""
     if not history:
         return history, performance_metrics
 
-    # Get the last user message
+    # Get the last user message from history
     last_user_msg = history[-1][0]
 
     # If it's None (could be from image operations), return as is
     if last_user_msg is None:
         return history, performance_metrics
 
-    # Remove the last exchange
+    # Remove the last exchange from history
     new_history = history[:-1]
 
-    # Call the model again with the last user message
+    # Call the model again with the last user message and the new history
     try:
-        response, updated_metrics = chat_response(last_user_msg, new_history, performance_metrics)
+        response, updated_metrics = chat_response(last_user_msg, new_history, performance_metrics, image)
         return response, updated_metrics
     except Exception as e:
         return new_history + [[last_user_msg, f"Error regenerating response: {str(e)}"]], "Error: Metrics unavailable"
 
+# Text-to-Speech function using Kokoro-82M model
 def text_to_speech(text, voice_type, speed):
     """Generate audio using Kokoro-82M model via Replicate"""
     # Check if API is available first
@@ -278,19 +293,20 @@ def text_to_speech(text, voice_type, speed):
     if not text:
         return None, "No text to convert to speech."
 
+    # Validate voice type and speed parameters
     try:
-        # Updated voice map based on the error message's supported voices
+        # Updated voice map
         voice_map = {
-            "Female Heart (American)": "af_nova",     # Changed from af_heart to af_nova
-            "Female Bella (American)": "af_bella",    # This one is still valid
-            "Female Emma (British)": "bf_emma",       # This one is still valid
-            "Male Michael (American)": "am_michael",  # This one is still valid
-            "Male Fenrir (American)": "am_fenrir",    # This one is still valid
-            "Male George (British)": "bm_george"      # This one is still valid
+            "Female River (American)": "af_river",
+            "Female Bella (American)": "af_bella",
+            "Female Emma (British)": "bf_emma",
+            "Male Michael (American)": "am_michael",
+            "Male Fenrir (American)": "am_fenrir",
+            "Male George (British)": "bm_george"
         }
 
         # Get the voice ID, with updated fallback
-        voice_id = voice_map.get(voice_type, "af_nova")  # Default to female American voice (updated)
+        voice_id = voice_map.get(voice_type, "af_river")  # Default to female American voice river
 
         # Validate speed is within acceptable range
         safe_speed = max(0.5, min(2.0, float(speed)))
@@ -341,12 +357,22 @@ def create_chat_interface():
     # Status indicator for showing processing state
     processing_status = gr.State(value=False)
 
+    # Add a state to track if an image is uploaded
+    image_uploaded_state = gr.State(value=False)
+
     with gr.Column():
         # Add styles using elem_classes
         chatbot = gr.Chatbot(
             value=initial_history,
             height=400,
             elem_classes="chatbox-style"
+        )
+        
+        # Add image instruction notification
+        image_instruction = gr.HTML(
+            """<div style="padding: 8px; margin: 8px 0; color: #ff5500; background-color: #fff3e0; border-radius: 4px; text-align: center;">
+            <b>⚠️ Please upload an image first to enable chat functionality</b>
+            </div>"""
         )
 
         # Add custom styles to the page
@@ -378,7 +404,7 @@ def create_chat_interface():
                 scale=9,
                 container=False
             )
-            send_btn = gr.Button("Send", scale=1)
+            send_btn = gr.Button("Send", scale=1, interactive=False)
 
         with gr.Row():
             upload_btn = gr.UploadButton("📁 Upload Image", file_types=["image"])
@@ -386,9 +412,9 @@ def create_chat_interface():
             clear_btn = gr.Button("🗑️ Clear History")
 
         with gr.Row():
-            extract_btn = gr.Button("📝 Extract Text")
-            caption_btn = gr.Button("💭 Caption Image")
-            summarize_btn = gr.Button("📋 Summarize Image")
+            extract_btn = gr.Button("📝 Extract Text", interactive=False)
+            caption_btn = gr.Button("💭 Caption Image", interactive=False)
+            summarize_btn = gr.Button("📋 Summarize Image", interactive=False)
 
         # Store uploaded image and display gallery
         with gr.Row():
@@ -414,14 +440,14 @@ def create_chat_interface():
             with gr.Column(scale=3):
                 voice_type = gr.Dropdown(
                     choices=[
-                        "Female Heart (American)",
+                        "Female River (American)",
                         "Female Bella (American)",
                         "Female Emma (British)",
                         "Male Michael (American)",
                         "Male Fenrir (American)",
                         "Male George (British)"
                     ],
-                    value="Female Heart (American)",
+                    value="Female River (American)",
                     label="Voice Type"
                 )
             with gr.Column(scale=3):
@@ -447,13 +473,13 @@ def create_chat_interface():
             tts_status = gr.Textbox(
                 label="TTS Status",
                 scale=2,
-                interactive=False # Non-interactive for status display
+                interactive=False
             )
 
             # Performance metrics on the right
             performance_metrics = gr.Textbox(
                 label="Performance Metrics",
-                value="Latency: N/A | Tokens: N/A",
+                value="Latency: N/A | Words: N/A",
                 interactive=False,
                 scale=3
             )
@@ -481,11 +507,11 @@ def create_chat_interface():
                 performance_metrics: metrics_val,
                 processing_indicator: gr.update(visible=False),
                 msg: gr.update(interactive=True),
-                send_btn: gr.update(interactive=True),
+                send_btn: gr.update(interactive=True if image_uploaded_state.value else False),
                 upload_btn: gr.update(interactive=True),
-                extract_btn: gr.update(interactive=True),
-                caption_btn: gr.update(interactive=True),
-                summarize_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=True if image_uploaded_state.value else False),
+                caption_btn: gr.update(interactive=True if image_uploaded_state.value else False),
+                summarize_btn: gr.update(interactive=True if image_uploaded_state.value else False),
                 regenerate_btn: gr.update(interactive=True),
                 tts_btn: gr.update(interactive=True),
                 processing_status: False
@@ -497,11 +523,11 @@ def create_chat_interface():
                 chatbot: chatbot_val,
                 processing_indicator: gr.update(visible=False),
                 msg: gr.update(interactive=True),
-                send_btn: gr.update(interactive=True),
+                send_btn: gr.update(interactive=True if image_uploaded_state.value else False),
                 upload_btn: gr.update(interactive=True),
-                extract_btn: gr.update(interactive=True),
-                caption_btn: gr.update(interactive=True),
-                summarize_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=True if image_uploaded_state.value else False),
+                caption_btn: gr.update(interactive=True if image_uploaded_state.value else False),
+                summarize_btn: gr.update(interactive=True if image_uploaded_state.value else False),
                 regenerate_btn: gr.update(interactive=True),
                 tts_btn: gr.update(interactive=True),
                 processing_status: False
@@ -514,41 +540,58 @@ def create_chat_interface():
                 tts_status: status_val,
                 processing_indicator: gr.update(visible=False),
                 msg: gr.update(interactive=True),
-                send_btn: gr.update(interactive=True),
+                send_btn: gr.update(interactive=True if image_uploaded_state.value else False),
                 upload_btn: gr.update(interactive=True),
-                extract_btn: gr.update(interactive=True),
-                caption_btn: gr.update(interactive=True),
-                summarize_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=True if image_uploaded_state.value else False),
+                caption_btn: gr.update(interactive=True if image_uploaded_state.value else False),
+                summarize_btn: gr.update(interactive=True if image_uploaded_state.value else False),
                 regenerate_btn: gr.update(interactive=True),
                 tts_btn: gr.update(interactive=True),
                 processing_status: False
             }
 
+        # Helper function to enable/disable buttons based on image upload
+        def update_button_state(image):
+            """Enable or disable buttons based on whether an image is uploaded"""
+            is_enabled = image is not None
+            return {
+                send_btn: gr.update(interactive=is_enabled),
+                extract_btn: gr.update(interactive=is_enabled),
+                caption_btn: gr.update(interactive=is_enabled),
+                summarize_btn: gr.update(interactive=is_enabled),
+                image_uploaded_state: is_enabled,
+                image_instruction: gr.update(visible=not is_enabled)  # Hide warning when image is present
+            }
+
         # Event handlers with locking mechanism
-        def locked_chat_response(message, history, performance_metrics):
-        # chat_response now returns updated history and metrics
-            updated_history, updated_metrics = chat_response(message, history, performance_metrics)
+        def locked_chat_response(message, history, performance_metrics, image=None):
+        # chat_response now accepts image and returns updated history and metrics
+            updated_history, updated_metrics = chat_response(message, history, performance_metrics, image)
             return updated_history, updated_metrics, ""  # Clear the input field
 
         # Modified clear function to reset and enable all inputs
         def clear_chat():
             return {
                 chatbot: [],
-                performance_metrics: "Latency: N/A | Tokens: N/A",
+                performance_metrics: "Latency: N/A | Words: N/A",
                 processing_indicator: gr.update(visible=False),
                 msg: gr.update(interactive=True, value=""),
-                send_btn: gr.update(interactive=True),
+                send_btn: gr.update(interactive=False),  # Set to false by default
                 upload_btn: gr.update(interactive=True),
-                extract_btn: gr.update(interactive=True),
-                caption_btn: gr.update(interactive=True),
-                summarize_btn: gr.update(interactive=True),
+                extract_btn: gr.update(interactive=False),  # Set to false by default
+                caption_btn: gr.update(interactive=False),  # Set to false by default
+                summarize_btn: gr.update(interactive=False),  # Set to false by default
                 regenerate_btn: gr.update(interactive=True),
                 tts_btn: gr.update(interactive=True),
-                processing_status: False
+                processing_status: False,
+                gallery: [],
+                image_output: None,
+                image_uploaded_state: False,
+                image_instruction: gr.update(visible=True)  # Show warning when cleared
             }
 
-        # Connect event handlers with input locking
-        # Each handler first disables inputs, then processes, then re-enables inputs
+        # Connect event handlers with input locking mechanism
+        # Each handler first disables inputs, then processes, then re-enables inputs after completion
 
         # For send message events
         send_handler = msg.submit(
@@ -557,7 +600,7 @@ def create_chat_interface():
             outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         ).then(
             fn=locked_chat_response,
-            inputs=[msg, chatbot, performance_metrics],
+            inputs=[msg, chatbot, performance_metrics, image_output],  # Added image_output
             outputs=[chatbot, performance_metrics, msg],
             show_progress="minimal"  # Change from "full" to "minimal"
         ).then(
@@ -573,7 +616,7 @@ def create_chat_interface():
             outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         ).then(
             fn=locked_chat_response,
-            inputs=[msg, chatbot, performance_metrics],
+            inputs=[msg, chatbot, performance_metrics, image_output],  # Added image_output
             outputs=[chatbot, performance_metrics, msg],
             show_progress="minimal"  # Change from "full" to "minimal"
         ).then(
@@ -582,24 +625,34 @@ def create_chat_interface():
             outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
 
-        # Handle image upload
-        upload_btn.upload(lambda x: (x, [x] if x is not None else []), upload_btn, [image_output, gallery])
+        # Handle image upload with button state updates
+        upload_btn.upload(
+            lambda x: (x, [x] if x is not None else []),
+            upload_btn,
+            [image_output, gallery]
+        ).then(
+            update_button_state,
+            inputs=[image_output],
+            outputs=[send_btn, extract_btn, caption_btn, summarize_btn, image_uploaded_state, image_instruction]
+        )
 
         # Clear button with full reset
         clear_btn.click(
             fn=clear_chat,
             inputs=None,
-            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn,
+                    extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn,
+                    processing_status, gallery, image_output, image_uploaded_state, image_instruction]
         )
 
-        # Regenerate with locking
+        # Regenerate with locking and image handling
         regenerate_btn.click(
             fn=start_processing,
             inputs=None,
             outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         ).then(
             fn=regenerate_response,
-            inputs=[chatbot, performance_metrics],
+            inputs=[chatbot, performance_metrics, image_output],  # Added image_output
             outputs=[chatbot, performance_metrics],
             show_progress="minimal"  # Change from "full" to "minimal"
         ).then(
@@ -674,13 +727,19 @@ def create_guide_interface():
 
     Welcome to the Chat Application! Here's how to use the various features:
 
+    ### Important: This application requires image uploads
+    - You must upload an image before you can use the chat functionality
+    - The Send button will be disabled until an image is uploaded
+
     ### Basic Chat
-    - Type your message in the text box and press Enter or click Send
-    - The chatbot will respond to your messages
+    - After uploading an image, type your message
+        # Chat Application Guide (continued)
+    - After uploading an image, type your message in the text box and press Enter or click Send
+    - The chatbot will respond to your messages about the uploaded image
     - All inputs are automatically disabled while the AI is processing to prevent multiple submissions
 
     ### Image Features (Powered by Qwen 2 VL 7B)
-    1. **Upload Image**: Click to upload an image file
+    1. **Upload Image**: Click to upload an image file (required step)
     2. **Extract Text**: Extracts any text present in the uploaded image
     3. **Caption Image**: Generates a detailed description of the uploaded image
     4. **Summarize Image**: Provides a comprehensive analysis of the image content
@@ -690,21 +749,21 @@ def create_guide_interface():
        - Female and Male voices
        - Multiple accents: American & British
     2. **Playback Speed**: Adjust how fast the text is spoken (0.5x to 2.0x)
-    3. **Play Last Response**: Convert the last bot message to speech
+    3. **Play Last Response**: Convert the last chatbot message to speech
 
     ### Other Controls
     - **Regenerate**: Regenerates the last response with a new AI call
-    - **Clear History**: Clears the chat history
+    - **Clear History**: Clears the chat history and removes the current image
 
     ### Performance Metrics
     - **Latency**: Total time from request to complete response
-    - **Tokens**: Number of tokens in the response
+    - **Words**: Words of tokens in the response
 
     Disclaimer: This web application **does not store any data** to comply with privacy regulations (GDPR, CCPA). All interactions are ephemeral. The chat history will be cleared when you close the browser tab.
     """)
 
 # Create the main application
-with gr.Blocks(theme=gr.themes.Soft()) as demo:
+with gr.Blocks(theme=gr.themes.Soft()) as hearsee:
     gr.Markdown("# Interactive Chat Application with AI Vision and Voice")
 
     with gr.Tabs():
@@ -714,4 +773,6 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
             create_guide_interface()
 
 if __name__ == "__main__":
-    demo.launch()
+    hearsee.launch()
+
+# End of file
