@@ -16,6 +16,14 @@ load_dotenv()
 # Constants for model IDs for easy updates
 QWEN_VL_MODEL = "lucataco/qwen2-vl-7b-instruct:bf57361c75677fc33d480d0c5f02926e621b2caa2000347cb74aeae9d2ca07ee"
 KOKORO_TTS_MODEL = "jaaari/kokoro-82m:f559560eb822dc509045f3921a1921234918b91739db4bf3daab2169b71c7a13"
+# Constants for other functions
+MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+INIT_HISTORY = [
+        ["Hello! Can you help me analyze an image?", "Of course! I'd be happy to help. You can upload an image using the Upload Image button below."],
+        ["What kind of images can I upload?", "You can upload most common image formats (JPG, PNG, etc.). Once uploaded, I can help you with:\n- Extracting text from the image\n- Generating image captions\n- Providing detailed image summaries\n I can also convert text to speech for you."],
+        ["That sounds great!", "Feel free to upload an image whenever you're ready. I'm here to help! 😊"]
+        ]
+
 
 # Check if the Replicate API token is set
 if "REPLICATE_API_TOKEN" not in os.environ:
@@ -46,6 +54,22 @@ def image_to_base64(image):
 
 # Update the chat_response function signature to accept an image parameter
 def chat_response(message, history, performance_metrics, image=None):
+    
+    # Check image size
+    try:
+        buffered = io.BytesIO()
+        img = Image.fromarray(image)
+        img.save(buffered, format="PNG")
+        size = len(buffered.getvalue())
+        
+        if size > MAX_IMAGE_SIZE:
+            error_message = f"Image size ({size/1024/1024:.1f}MB) exceeds maximum allowed size (10MB)"
+            return [[None, error_message]], "Error: Image too large"
+            
+    except Exception as e:
+        error_message = f"Error checking image size: {str(e)}"
+        return [[None, error_message]], "Error: Image processing failed"
+
     # Check if API is available first
     api_available, error_msg = verify_api_available()
     if not api_available:
@@ -110,7 +134,7 @@ def chat_response(message, history, performance_metrics, image=None):
         latency = end_time - start_time
 
         # Update performance metrics
-        updated_metrics = f"Latency: {latency:.2f}s | Tokens: {word_count}"
+        updated_metrics = f"Latency: {latency:.2f}s | Words: {word_count}"
 
         # Return properly formatted chat history
         if not history:
@@ -126,19 +150,39 @@ def chat_response(message, history, performance_metrics, image=None):
 
 def extract_text(image, history=None):
     """Extract text from image using Qwen 2 VL model"""
+
+    # Check image size
+    try:
+        # Convert image to bytes to check size
+        buffered = io.BytesIO()
+        img = Image.fromarray(image)
+        img.save(buffered, format="PNG")
+        size = len(buffered.getvalue())
+        
+        if size > MAX_IMAGE_SIZE:
+            error_message = f"Image size ({size/1024/1024:.1f}MB) exceeds maximum allowed size (10MB)"
+            return [[None, error_message]], "Error: Image too large"
+            
+    except Exception as e:
+        error_message = f"Error checking image size: {str(e)}"
+        return [[None, error_message]], "Error: Image processing failed"
+
+    # Start measuring time
+    start_time = time.time()
+    
     # Check if API is available first
     api_available, error_msg = verify_api_available()
     if not api_available:
-        return [[None, error_msg]] if history is None else history + [[None, error_msg]]
+        return [[None, error_msg]], "Error: Metrics unavailable"
 
     if image is None:
-        return [[None, "Please upload an image first."]] if history is None else history + [[None, "Please upload an image first."]]
+        return [[None, "Please upload an image first."]], "Error: Metrics unavailable"
     try:
         # Convert the image to base64 for processing
         img_str = image_to_base64(image)
         if img_str is None:
             error_message = "Error processing the image. Please try another image."
-            return [[None, error_message]] if history is None else history + [[None, error_message]]
+            return [[None, error_message]], "Error: Metrics unavailable"
 
         # Build system prompt
         system_prompt = "You are a helpful AI assistant specializing in extracting text from images."
@@ -157,39 +201,69 @@ def extract_text(image, history=None):
         # Qwen returns a stream of text, so combine it
         result = "".join(output) if isinstance(output, list) else output
 
+        # Calculate word count
+        word_count = len(result.split())
+
+        # Calculate metrics
+        end_time = time.time()
+        latency = end_time - start_time
+
+        # Update performance metrics
+        metrics = f"Latency: {latency:.2f}s | Words: {word_count}"
+
         # Update history with the extracted text result
         user_message = "Please extract the text from this image."
         if history is None:
-            return [[user_message, result]]
+            return [[user_message, result]], metrics
         else:
-            return history + [[user_message, result]]
+            return history + [[user_message, result]], metrics
+
     except Exception as e:
         error_message = f"Error extracting text: {str(e)}"
         if history is None:
-            return [[None, error_message]]
+            return [[None, error_message]], "Error: Metrics unavailable"
         else:
-            return history + [[None, error_message]]
+            return history + [[None, error_message]], "Error: Metrics unavailable"
 
 def caption_image(image, history=None):
     """Generate caption for image using Qwen 2 VL model"""
+
+    # Check image size
+    try:
+        buffered = io.BytesIO()
+        img = Image.fromarray(image)
+        img.save(buffered, format="PNG")
+        size = len(buffered.getvalue())
+        
+        if size > MAX_IMAGE_SIZE:
+            error_message = f"Image size ({size/1024/1024:.1f}MB) exceeds maximum allowed size (10MB)"
+            return [[None, error_message]], "Error: Image too large"
+            
+    except Exception as e:
+        error_message = f"Error checking image size: {str(e)}"
+        return [[None, error_message]], "Error: Image processing failed"
+
+    # Start measuring time
+    start_time = time.time()
+    
     # Check if API is available first
     api_available, error_msg = verify_api_available()
     if not api_available:
-        return [[None, error_msg]] if history is None else history + [[None, error_msg]]
+        return [[None, error_msg]], "Error: Metrics unavailable"
 
     if image is None:
-        return [[None, "Please upload an image first."]] if history is None else history + [[None, "Please upload an image first."]]
+        return [[None, "Please upload an image first."]], "Error: Metrics unavailable"
 
     try:
         # Convert the image to base64 for processing
         img_str = image_to_base64(image)
         if img_str is None:
             error_message = "Error processing the image. Please try another image."
-            return [[None, error_message]] if history is None else history + [[None, error_message]]
+            return [[None, error_message]], "Error: Metrics unavailable"
 
         # Build system prompt
         system_prompt = "You are a helpful AI assistant specializing in describing images in detail."
-        user_prompt = "Describe this image in detail, including objects, people, scenery, colors, and composition."
+        user_prompt = "Describe this image in detail, including objects, people, scenery, colors, and composition. Reply in plaintext and avoid markdown formatting."
 
         # Call Qwen 2 VL model from Replicate
         output = replicate.run(
@@ -204,35 +278,65 @@ def caption_image(image, history=None):
         # Qwen returns a stream of text, so combine it
         result = "".join(output) if isinstance(output, list) else output
 
+        # Calculate word count
+        word_count = len(result.split())
+
+        # Calculate metrics
+        end_time = time.time()
+        latency = end_time - start_time
+
+        # Update performance metrics
+        metrics = f"Latency: {latency:.2f}s | Words: {word_count}"
+
         # Update history with the caption result
         user_message = "Please describe this image in detail."
         if history is None:
-            return [[user_message, result]]
+            return [[user_message, result]], metrics
         else:
-            return history + [[user_message, result]]
+            return history + [[user_message, result]], metrics
+
     except Exception as e:
         error_message = f"Error generating caption: {str(e)}"
         if history is None:
-            return [[None, error_message]]
+            return [[None, error_message]], "Error: Metrics unavailable"
         else:
-            return history + [[None, error_message]]
+            return history + [[None, error_message]], "Error: Metrics unavailable"
 
 def summarize_image(image, history=None):
     """Generate summary for image using Qwen 2 VL model"""
+
+    # Check image size
+    try:
+        buffered = io.BytesIO()
+        img = Image.fromarray(image)
+        img.save(buffered, format="PNG")
+        size = len(buffered.getvalue())
+        
+        if size > MAX_IMAGE_SIZE:
+            error_message = f"Image size ({size/1024/1024:.1f}MB) exceeds maximum allowed size (10MB)"
+            return [[None, error_message]], "Error: Image too large"
+            
+    except Exception as e:
+        error_message = f"Error checking image size: {str(e)}"
+        return [[None, error_message]], "Error: Image processing failed"
+
+    # Start measuring time
+    start_time = time.time()
+    
     # Check if API is available first
     api_available, error_msg = verify_api_available()
     if not api_available:
-        return [[None, error_msg]] if history is None else history + [[None, error_msg]]
+        return [[None, error_msg]], "Error: Metrics unavailable"
 
     if image is None:
-        return [[None, "Please upload an image first."]] if history is None else history + [[None, "Please upload an image first."]]
+        return [[None, "Please upload an image first."]], "Error: Metrics unavailable"
 
     try:
         # Convert the image to base64 for processing
         img_str = image_to_base64(image)
         if img_str is None:
             error_message = "Error processing the image. Please try another image."
-            return [[None, error_message]] if history is None else history + [[None, error_message]]
+            return [[None, error_message]], "Error: Metrics unavailable"
 
         # Call Qwen 2 VL model from Replicate
         output = replicate.run(
@@ -247,18 +351,29 @@ def summarize_image(image, history=None):
         # Qwen returns a stream of text, so combine it
         result = "".join(output) if isinstance(output, list) else output
 
+        # Calculate word count
+        word_count = len(result.split())
+
+        # Calculate metrics
+        end_time = time.time()
+        latency = end_time - start_time
+
+        # Update performance metrics
+        metrics = f"Latency: {latency:.2f}s | Words: {word_count}"
+
         # Update history with the summary result
         user_message = "Please provide a comprehensive summary of this image."
         if history is None:
-            return [[user_message, result]]
+            return [[user_message, result]], metrics
         else:
-            return history + [[user_message, result]]
+            return history + [[user_message, result]], metrics
+
     except Exception as e:
         error_message = f"Error summarizing image: {str(e)}"
         if history is None:
-            return [[None, error_message]]
+            return [[None, error_message]], "Error: Metrics unavailable"
         else:
-            return history + [[None, error_message]]
+            return history + [[None, error_message]], "Error: Metrics unavailable"
 
 def regenerate_response(history, performance_metrics, image=None):
     """Actually regenerate the last bot message by re-running the model"""
@@ -347,12 +462,8 @@ def get_last_bot_message(history):
     return history[-1][1]
 
 def create_chat_interface():
-    # Initial system prompt as chat history
-    initial_history = [
-        ["Hello! Can you help me analyze an image?", "Of course! I'd be happy to help. You can upload an image using the Upload Image button below."],
-        ["What kind of images can I upload?", "You can upload most common image formats (JPG, PNG, etc.). Once uploaded, I can help you with:\n- Extracting text from the image\n- Generating image captions\n- Providing detailed image summaries\n I can also convert text to speech for you."],
-        ["That sounds great!", "Feel free to upload an image whenever you're ready. I'm here to help! 😊"]
-    ]
+    # Initial history to be displayed as chat history
+    initial_history = INIT_HISTORY
 
     # Status indicator for showing processing state
     processing_status = gr.State(value=False)
@@ -371,7 +482,7 @@ def create_chat_interface():
         # Add image instruction notification
         image_instruction = gr.HTML(
             """<div style="padding: 8px; margin: 8px 0; color: #ff5500; background-color: #fff3e0; border-radius: 4px; text-align: center;">
-            <b>⚠️ Please upload an image first to enable chat functionality</b>
+            <b>⚠️ Please upload an image first to enable/renable chat functionality</b>
             </div>"""
         )
 
@@ -385,8 +496,9 @@ def create_chat_interface():
                 padding: 5px;
                 border-radius: 4px;
                 background-color: #fff3e0;
-                display: inline-block;
-                margin-top: 5px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
             </style>
         """)
@@ -407,7 +519,7 @@ def create_chat_interface():
             send_btn = gr.Button("Send", scale=1, interactive=False)
 
         with gr.Row():
-            upload_btn = gr.UploadButton("📁 Upload Image", file_types=["image"])
+            upload_btn = gr.UploadButton("📁 Upload Image", file_types=["image"], file_count="single")
             regenerate_btn = gr.Button("🔄 Regenerate")
             clear_btn = gr.Button("🗑️ Clear History")
 
@@ -571,8 +683,10 @@ def create_chat_interface():
 
         # Modified clear function to reset and enable all inputs
         def clear_chat():
+            # Restart the chat with initial history
+            initial_history = INIT_HISTORY
             return {
-                chatbot: [],
+                chatbot: initial_history,
                 performance_metrics: "Latency: N/A | Words: N/A",
                 processing_indicator: gr.update(visible=False),
                 msg: gr.update(interactive=True, value=""),
@@ -669,11 +783,11 @@ def create_chat_interface():
         ).then(
             fn=extract_text,
             inputs=[image_output, chatbot],
-            outputs=[chatbot]
+            outputs=[chatbot, performance_metrics]
         ).then(
-            fn=end_processing_image,
-            inputs=[chatbot],
-            outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+            fn=end_processing,
+            inputs=[chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
 
         # Caption image with locking
@@ -684,11 +798,11 @@ def create_chat_interface():
         ).then(
             fn=caption_image,
             inputs=[image_output, chatbot],
-            outputs=[chatbot]
+            outputs=[chatbot, performance_metrics]
         ).then(
-            fn=end_processing_image,
-            inputs=[chatbot],
-            outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+            fn=end_processing,
+            inputs=[chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
 
         # Summarize image with locking
@@ -699,11 +813,11 @@ def create_chat_interface():
         ).then(
             fn=summarize_image,
             inputs=[image_output, chatbot],
-            outputs=[chatbot]
+            outputs=[chatbot, performance_metrics]
         ).then(
-            fn=end_processing_image,
-            inputs=[chatbot],
-            outputs=[chatbot, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
+            fn=end_processing,
+            inputs=[chatbot, performance_metrics],
+            outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
 
         # TTS with locking
@@ -723,7 +837,7 @@ def create_chat_interface():
 
 def create_guide_interface():
     return gr.Markdown("""
-    # Chat Application Guide
+    # HearSee Chat Application Guide
 
     Welcome to the Chat Application! Here's how to use the various features:
 
@@ -732,11 +846,9 @@ def create_guide_interface():
     - The Send button will be disabled until an image is uploaded
 
     ### Basic Chat
-    - After uploading an image, type your message
-        # Chat Application Guide (continued)
     - After uploading an image, type your message in the text box and press Enter or click Send
     - The chatbot will respond to your messages about the uploaded image
-    - All inputs are automatically disabled while the AI is processing to prevent multiple submissions
+    - Upload a new image or reupload the same image to continue or change the context of the conversation
 
     ### Image Features (Powered by Qwen 2 VL 7B)
     1. **Upload Image**: Click to upload an image file (required step)
@@ -757,14 +869,14 @@ def create_guide_interface():
 
     ### Performance Metrics
     - **Latency**: Total time from request to complete response
-    - **Words**: Words of tokens in the response
+    - **Words**: Number of words in the response
 
     Disclaimer: This web application **does not store any data** to comply with privacy regulations (GDPR, CCPA). All interactions are ephemeral. The chat history will be cleared when you close the browser tab.
     """)
 
 # Create the main application
 with gr.Blocks(theme=gr.themes.Soft()) as hearsee:
-    gr.Markdown("# Interactive Chat Application with AI Vision and Voice")
+    gr.Markdown("# HearSee: Multimodal Chat Application Tool with Vision and Voice")
 
     with gr.Tabs():
         with gr.Tab("Chat"):

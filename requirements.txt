@@ -1,5 +1,7 @@
-gradio
-replicate
-Pillow
-python-dotenv
-requests
+gradio== 5.29.0
+replicate== 1.0.6
+Pillow== 11.2.1 
+python-dotenv== 1.1.0
+requests== 2.32.3
+pydantic== 2.10.6
+pydantic_core== 2.27.2
