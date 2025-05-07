@@ -75,7 +75,7 @@ def chat_response(message, history, performance_metrics):
             QWEN_VL_MODEL,
             input={
                 "prompt": f"{system_prompt}\n\nConversation History:\n{context}\nUser: {message}\nAssistant:",
-                "max_new_tokens": 1024,
+                "max_new_tokens": 512,
                 "temperature": 0.7
             },
             stream=True  # Enable streaming to measure time to first token
@@ -149,7 +149,7 @@ def extract_text(image, history=None):
             input={
                 "prompt": f"{system_prompt}\n\n{user_prompt}",
                 "media": f"data:image/png;base64,{img_str}",
-                "max_new_tokens": 1024,
+                "max_new_tokens": 512,
                 "temperature": 0.5
             }
         )
@@ -197,7 +197,7 @@ def caption_image(image, history=None):
             input={
                 "prompt": f"{system_prompt}\n\n{user_prompt}",
                 "media": f"data:image/png;base64,{img_str}",
-                "max_new_tokens": 1024,
+                "max_new_tokens": 512,
                 "temperature": 0.7
             }
         )
@@ -413,8 +413,9 @@ def create_chat_interface():
                     label="Uploaded Image",
                     show_label=True,
                     elem_id="image-gallery",
-                    columns=1,
-                    height=300,
+                    columns=3,
+                    rows=1,
+                    height="auto",
                     object_fit="contain"
                 )
 
@@ -456,7 +457,8 @@ def create_chat_interface():
             # TTS Status on the left
             tts_status = gr.Textbox(
                 label="TTS Status",
-                scale=2
+                scale=2,
+                interactive=False # Non-interactive for status display
             )
 
             # Performance metrics on the right
