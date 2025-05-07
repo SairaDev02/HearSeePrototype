@@ -2,3 +2,4 @@ gradio
 replicate
 Pillow
 python-dotenv
+requests

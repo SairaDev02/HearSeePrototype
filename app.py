@@ -3,9 +3,11 @@ import time
 import replicate
 import os
 import tempfile
+from tempfile import NamedTemporaryFile
 import base64
 from PIL import Image
 import io
+import requests
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -58,10 +60,8 @@ def chat_response(message, history, performance_metrics):
         return history, performance_metrics
 
     try:
-        # Start measuring time
+        # Start measuring time for latency calculation
         start_time = time.time()
-        first_token_time = None
-
         # Build system prompt from chat history
         system_prompt = "You are a helpful AI assistant specializing in analyzing images and providing detailed information."
         # Convert history to context for the LLM
@@ -70,46 +70,33 @@ def chat_response(message, history, performance_metrics):
             if h[0] is not None:  # Check if user message exists
                 context += f"User: {h[0]}\nAssistant: {h[1]}\n\n"
 
-        # Call Qwen model for text chat
-        output_iterator = replicate.run(
+        # Call Qwen model for text chat - FIXED: Removed streaming
+        output = replicate.run(
             QWEN_VL_MODEL,
             input={
                 "prompt": f"{system_prompt}\n\nConversation History:\n{context}\nUser: {message}\nAssistant:",
-                "max_new_tokens": 512,
-                "temperature": 0.7
-            },
-            stream=True  # Enable streaming to measure time to first token
+                "max_new_tokens": 512
+            }
         )
 
-        # Process the streamed output
-        result = ""
-        token_count = 0
+        # Process the output (now non-streaming)
+        if isinstance(output, list):
+            result = "".join(output)
+        else:
+            result = output
 
-        for token in output_iterator:
-            if first_token_time is None and token:
-                first_token_time = time.time()  # Record time of first token
-
-            if token:
-                result += token
-                token_count += 1
-
+        # Calculate token count (approximate by splitting on spaces)
+        token_count = len(result.split())
         # Calculate end time and metrics
         end_time = time.time()
-        total_time = end_time - start_time
-        latency = total_time  # Overall latency
 
-        # Calculate time to first token if we received tokens
-        ttft = "N/A"
-        if first_token_time is not None:
-            ttft = f"{(first_token_time - start_time):.2f}s"
+        # Calculate latency according to the definition:
+        # "The average duration of processing time in seconds between the
+        # submission of a request query and the receipt of a response"
+        latency = end_time - start_time
 
-        # Calculate tokens per second
-        tps = "N/A"
-        if token_count > 0 and total_time > 0:
-            tps = f"{token_count / total_time:.2f}"
-
-        # Update performance metrics
-        updated_metrics = f"Tokens/sec: {tps} | Time to first token: {ttft} | Latency: {latency:.2f}s"
+        # Update performance metrics with clear latency indication
+        updated_metrics = f"Latency: {latency:.2f}s | Tokens: {token_count}"
 
         # Return properly formatted chat history
         if not history:
@@ -149,8 +136,7 @@ def extract_text(image, history=None):
             input={
                 "prompt": f"{system_prompt}\n\n{user_prompt}",
                 "media": f"data:image/png;base64,{img_str}",
-                "max_new_tokens": 512,
-                "temperature": 0.5
+                "max_new_tokens": 512
             }
         )
 
@@ -197,8 +183,7 @@ def caption_image(image, history=None):
             input={
                 "prompt": f"{system_prompt}\n\n{user_prompt}",
                 "media": f"data:image/png;base64,{img_str}",
-                "max_new_tokens": 512,
-                "temperature": 0.7
+                "max_new_tokens": 512
             }
         )
 
@@ -239,10 +224,9 @@ def summarize_image(image, history=None):
         output = replicate.run(
             QWEN_VL_MODEL,
             input={
-                "prompt": "Analyze this image and provide a comprehensive summary including objects, people, activities, environment, colors, and mood.",
+                "prompt": "Analyze this image and provide a comprehensive contextual summary including objects, people, activities, environment, colors, and mood. Reply in plaintext and avoid markdown formatting.",
                 "media": f"data:image/png;base64,{img_str}",
-                "max_new_tokens": 512,
-                "temperature": 0.5
+                "max_new_tokens": 512
             }
         )
 
@@ -280,7 +264,7 @@ def regenerate_response(history, performance_metrics):
     # Call the model again with the last user message
     try:
         response, updated_metrics = chat_response(last_user_msg, new_history, performance_metrics)
-        return new_history + [[last_user_msg, response]], updated_metrics
+        return response, updated_metrics
     except Exception as e:
         return new_history + [[last_user_msg, f"Error regenerating response: {str(e)}"]], "Error: Metrics unavailable"
 
@@ -324,8 +308,19 @@ def text_to_speech(text, voice_type, speed):
         # Kokoro returns a URL to the audio file
         audio_url = output
 
-        # For Gradio, we should return the URL
-        return audio_url, f"Generated audio using {voice_type} voice at {safe_speed}x speed"
+        # Download the audio file from the URL and save it locally using requests
+        response = requests.get(audio_url)
+        if response.status_code == 200:
+            # Create a temporary file to store the audio
+            with NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+                temp_file.write(response.content)
+                temp_path = temp_file.name
+
+            # Return the local file path instead of the URL
+            return temp_path, f"Generated audio using {voice_type} voice at {safe_speed}x speed"
+        else:
+            return None, f"Error downloading audio: HTTP status {response.status_code}"
+
     except Exception as e:
         return None, f"Error generating speech: {str(e)}"
 
@@ -357,12 +352,6 @@ def create_chat_interface():
         # Add custom styles to the page
         gr.HTML("""
             <style>
-            .chatbox-style {
-                border: 1px solid #ccc !important;
-                border-radius: 8px !important;
-                padding: 10px !important;
-                background-color: #f9f9f9 !important;
-            }
             /* Add loading indicator style */
             .processing-indicator {
                 color: #ff5500;
@@ -413,7 +402,7 @@ def create_chat_interface():
                     label="Uploaded Image",
                     show_label=True,
                     elem_id="image-gallery",
-                    columns=3,
+                    columns=2,
                     rows=1,
                     height="auto",
                     object_fit="contain"
@@ -464,7 +453,7 @@ def create_chat_interface():
             # Performance metrics on the right
             performance_metrics = gr.Textbox(
                 label="Performance Metrics",
-                value="Tokens/sec: N/A | Time to first token: N/A | Latency: N/A",
+                value="Latency: N/A | Tokens: N/A",
                 interactive=False,
                 scale=3
             )
@@ -545,7 +534,7 @@ def create_chat_interface():
         def clear_chat():
             return {
                 chatbot: [],
-                performance_metrics: "Tokens/sec: N/A | Time to first token: N/A | Latency: N/A",
+                performance_metrics: "Latency: N/A | Tokens: N/A",
                 processing_indicator: gr.update(visible=False),
                 msg: gr.update(interactive=True, value=""),
                 send_btn: gr.update(interactive=True),
@@ -561,22 +550,23 @@ def create_chat_interface():
         # Connect event handlers with input locking
         # Each handler first disables inputs, then processes, then re-enables inputs
 
-        # Chat response with message clearing
+        # For send message events
         send_handler = msg.submit(
-            fn=start_processing,  # First disable all inputs
+            fn=start_processing,
             inputs=None,
             outputs=[processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         ).then(
-            fn=locked_chat_response,  # Then process the request
+            fn=locked_chat_response,
             inputs=[msg, chatbot, performance_metrics],
-            outputs=[chatbot, performance_metrics, msg]
+            outputs=[chatbot, performance_metrics, msg],
+            show_progress="minimal"  # Change from "full" to "minimal"
         ).then(
-            fn=end_processing,  # Finally re-enable all inputs
+            fn=end_processing,
             inputs=[chatbot, performance_metrics],
             outputs=[chatbot, performance_metrics, processing_indicator, msg, send_btn, upload_btn, extract_btn, caption_btn, summarize_btn, regenerate_btn, tts_btn, processing_status]
         )
 
-        # Same setup for button click
+        # Same for button click
         send_btn.click(
             fn=start_processing,
             inputs=None,
@@ -584,7 +574,8 @@ def create_chat_interface():
         ).then(
             fn=locked_chat_response,
             inputs=[msg, chatbot, performance_metrics],
-            outputs=[chatbot, performance_metrics, msg]
+            outputs=[chatbot, performance_metrics, msg],
+            show_progress="minimal"  # Change from "full" to "minimal"
         ).then(
             fn=end_processing,
             inputs=[chatbot, performance_metrics],
@@ -609,7 +600,8 @@ def create_chat_interface():
         ).then(
             fn=regenerate_response,
             inputs=[chatbot, performance_metrics],
-            outputs=[chatbot, performance_metrics]
+            outputs=[chatbot, performance_metrics],
+            show_progress="minimal"  # Change from "full" to "minimal"
         ).then(
             fn=end_processing,
             inputs=[chatbot, performance_metrics],
@@ -705,9 +697,8 @@ def create_guide_interface():
     - **Clear History**: Clears the chat history
 
     ### Performance Metrics
-    - **Tokens per second**: How fast the model generates tokens
-    - **Time to first token**: How long it takes to get the first response
     - **Latency**: Total time from request to complete response
+    - **Tokens**: Number of tokens in the response
 
     Disclaimer: This web application **does not store any data** to comply with privacy regulations (GDPR, CCPA). All interactions are ephemeral. The chat history will be cleared when you close the browser tab.
     """)
