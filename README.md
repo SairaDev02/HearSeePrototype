@@ -2,8 +2,6 @@
 
 HearSee is a powerful and user-friendly web application that combines vision AI and speech synthesis capabilities to provide an interactive experience for analyzing and discussing images with AI assistance.
 
-![HearSee Demo](https://github.com/yourusername/HearSeePrototype/raw/main/demo_images/hearsee_demo.png)
-
 ## Features
 
 ### 🖼️ Vision AI Capabilities
@@ -77,9 +75,11 @@ HearSee leverages state-of-the-art AI models through the Replicate API:
 ```
 gradio
 replicate
-pillow
-requests
+Pillow
 python-dotenv
+requests
+pydantic
+pydantic_core
 ```
 
 ## API Usage Notes
@@ -120,5 +120,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Contact
 
 Email: sairadev02@gmail.com
-
-Project Link: [https://github.com/yourusername/HearSeePrototype](https://github.com/yourusername/HearSeePrototype)
