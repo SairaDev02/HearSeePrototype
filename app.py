@@ -482,7 +482,7 @@ def create_chat_interface():
         # Add image instruction notification
         image_instruction = gr.HTML(
             """<div style="padding: 8px; margin: 8px 0; color: #ff5500; background-color: #fff3e0; border-radius: 4px; text-align: center;">
-            <b>⚠️ Please upload an image first to enable/renable chat functionality</b>
+            <b>⚠️ Please upload an image first to enable/renable chat functionality (Max 10MB size)</b>
             </div>"""
         )
 
