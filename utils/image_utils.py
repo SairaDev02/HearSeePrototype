@@ -27,8 +27,7 @@ class ImageUtils:
         if not size_valid:
             return [[None, size_msg]], "Error: Image too large"
 
-        if image is None:
-            return [[None, "Please upload an image first."]], "Error: Metrics unavailable"
+# Removed redundant check for `image is None` as `verify_image_size` already handles this case.
 
         try:
             img_str = ImageService.image_to_base64(image)
