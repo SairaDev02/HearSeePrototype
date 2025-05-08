@@ -64,6 +64,7 @@ class ImageUtils:
         except Exception as e:
             logger.error(f"Error extracting text from image: {str(e)}", exc_info=True)
             error_message = f"Error extracting text: {str(e)}"
+            history = [] if history is None else history
             return history + [[None, error_message]], "Error: Status unavailable. Please try again."
 
     @staticmethod
@@ -114,6 +115,7 @@ class ImageUtils:
         except Exception as e:
             logger.error(f"Error generating image caption: {str(e)}", exc_info=True)
             error_message = f"Error generating caption: {str(e)}"
+            history = [] if history is None else history
             return history + [[None, error_message]], "Error: Status unavailable. Please try again."
 
     @staticmethod
@@ -161,4 +163,5 @@ class ImageUtils:
         except Exception as e:
             logger.error(f"Error summarizing image: {str(e)}", exc_info=True)
             error_message = f"Error summarizing image: {str(e)}"
+            history = [] if history is None else history
             return history + [[None, error_message]], "Error: Status unavailable. Please try again."

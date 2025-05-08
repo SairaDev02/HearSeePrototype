@@ -1,7 +1,12 @@
 # ignore api key in .env file
 .env
-
 # ignore log files
 logs/
 *.log
 *.log.*
+# ignore test cache and coverage files
+.coverage
+htmlcov/
+.pytest_cache/
+# ignore python cache files
+__pycache__/
