@@ -155,8 +155,11 @@ Email: sairadev02@gmail.com
 
 ## Testing Framework
 
-HearSee implements a comprehensive testing framework to ensure code quality, reliability, and maintainability. This section provides detailed information about the testing setup, how to run tests, and guidelines for writing new tests.
+HearSee implements a comprehensive testing framework to ensure code quality, reliability, and maintainability. This section provides detailed information about the testing setup, how to run tests, and guidelines for writing new tests. The framework leverages the following tools:
 
+- [pytest](https://docs.pytest.org/en/stable/): A framework for writing and running test cases.
+- [unittest.mock](https://docs.python.org/3/library/unittest.mock.html): A library for creating mock objects for testing.
+- [pytest-cov](https://pytest-cov.readthedocs.io/en/latest/): A plugin for measuring code coverage in pytest.
 ### Test Directory Structure
 
 ```
