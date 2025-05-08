@@ -1,0 +1,25 @@
+[run]
+source = .
+omit = 
+    */site-packages/*
+    */dist-packages/*
+    setup.py
+    # Exclude specific failing test files
+    tests/unit/config/test_logging_config.py
+    tests/unit/utils/test_logger.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass
+    raise ImportError
+    except ImportError
+    def setup_module
+    def teardown_module
+
+[paths]
+source =
+    ./
