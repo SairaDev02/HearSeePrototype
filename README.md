@@ -30,6 +30,7 @@ HearSee leverages state-of-the-art AI models through the Replicate API:
 
 - **Qwen 2 VL 7B**: Multimodal large language model for image understanding and text generation
 - **Kokoro TTS**: High-quality text-to-speech synthesis model
+- **Python Logging**: Structured logging framework for application monitoring and debugging
 
 ## Prerequisites
 
@@ -82,6 +83,19 @@ pydantic
 pydantic_core
 ```
 
+## Logging System
+
+HearSee implements a comprehensive logging system that:
+
+- Captures application events at different severity levels (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Logs to both console and rotating log files
+- Maintains separate log files for all logs (`logs/app.log`) and errors only (`logs/error.log`)
+- Includes contextual information such as timestamps, module names, and exception tracebacks
+- Configurable verbosity levels for different environments
+- Automatically rotates log files to prevent excessive disk usage (10MB max size with 5 backups)
+
+Log files are stored in the `logs` directory and are automatically created on application startup.
+
 ## API Usage Notes
 
 HearSee uses the following Replicate models:
@@ -106,6 +120,24 @@ HearSee prioritizes user privacy:
 ## License
 
 [MIT License](LICENSE)
+
+## Development
+
+### Logging Guidelines
+
+When developing new features or fixing bugs, follow these logging guidelines:
+
+1. Import the logging module in each file that requires logging
+2. Get a module-level logger using `logger = logging.getLogger(__name__)`
+3. Use appropriate log levels:
+   - DEBUG: Detailed information for debugging
+   - INFO: Confirmation that things are working as expected
+   - WARNING: Indication that something unexpected happened
+   - ERROR: Error conditions that prevent functionality from working
+   - CRITICAL: Critical errors that may lead to application failure
+
+4. Include contextual information in log messages
+5. Use exception logging with traceback for error conditions
 
 ## Contributing
 

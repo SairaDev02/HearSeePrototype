@@ -3,6 +3,7 @@
 import requests
 from tempfile import NamedTemporaryFile
 import os
+import logging
 
 from .replicate_service import ReplicateService
 from config.settings import (
@@ -11,6 +12,9 @@ from config.settings import (
     DEFAULT_VOICE, 
     DEFAULT_SPEED
 )
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
 
 # Module level functions (exported directly)
 def validate_voice_type(voice_type=None):
@@ -145,4 +149,4 @@ class TTSService:
             if file_path and os.path.exists(file_path):
                 os.unlink(file_path)
         except Exception as e:
-            print(f"Error cleaning up audio file: {e}")
+            logger.error(f"Error cleaning up audio file: {e}", exc_info=True)

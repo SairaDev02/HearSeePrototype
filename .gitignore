@@ -1,2 +1,7 @@
 # ignore api key in .env file
 .env
+
+# ignore log files
+logs/
+*.log
+*.log.*

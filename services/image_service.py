@@ -4,8 +4,12 @@ from PIL import Image
 import io
 import base64
 import numpy as np
+import logging
 
 from config.settings import MAX_IMAGE_SIZE
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
 
 # Module level functions (exported directly)
 def image_to_base64(image):
@@ -58,7 +62,7 @@ class ImageService:
             img.save(buffered, format="PNG")
             return base64.b64encode(buffered.getvalue()).decode()
         except Exception as e:
-            print(f"Error converting image to base64: {e}")
+            logger.error(f"Error converting image to base64: {e}", exc_info=True)
             return None
 
     @staticmethod
