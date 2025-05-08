@@ -11,9 +11,11 @@ import os
 from tempfile import NamedTemporaryFile
 import requests
 from dotenv import load_dotenv
+import logging
 
 # Import from our modular components
 from config.settings import INIT_HISTORY
+from config.logging_config import configure_logging
 from services.image_service import ImageService
 from services.replicate_service import ReplicateService
 from services.tts_service import TTSService
@@ -21,8 +23,10 @@ from utils.validators import get_last_bot_message, validate_image_input
 from utils.image_utils import ImageUtils
 from ui import ChatInterface, GuideInterface, UIStateManager
 
-# Load environment variables
+# Load environment variables and configure logging
 load_dotenv()
+configure_logging()
+logger = logging.getLogger(__name__)
 
 def create_app():
     """
@@ -105,20 +109,24 @@ def create_app():
                 def process_chat_message(message, history, metrics, image=None):
                     """Process a chat message and return updated history and metrics."""
                     start_time = time.time()
+                    logger.info(f"Processing chat message: {message[:50]}{'...' if len(message) > 50 else ''}")
                     
                     # Check image size
                     size_valid, size_msg = ImageService.verify_image_size(image)
                     if not size_valid:
+                        logger.warning(f"Image size validation failed: {size_msg}")
                         return history + [[message, size_msg]], "Error: Image too large"
                     
                     # Check API availability
                     api_available, error_msg = ReplicateService.verify_api_available()
                     if not api_available:
+                        logger.error(f"API unavailable: {error_msg}")
                         return history + [[message, error_msg]], "Error: API unavailable"
                     
                     # Validate image requirement
                     valid_img, img_error = validate_image_input(image)
                     if not valid_img:
+                        logger.warning(f"Image validation failed: {img_error}")
                         return history + [[message, img_error]], "Error: Image required"
                     
                     # Process the message
@@ -135,6 +143,7 @@ def create_app():
                             if h[0] is not None:
                                 context += f"User: {h[0]}\nAssistant: {h[1]}\n\n"
                         
+                        logger.debug("Running vision model")
                         # Run model
                         result = ReplicateService.run_vision_model(
                             f"{system_prompt}\n\nConversation History:\n{context}\nUser: {message}\nAssistant:",
@@ -147,9 +156,11 @@ def create_app():
                         word_count = len(result.split())
                         updated_metrics = f"Latency: {latency:.2f}s | Words: {word_count}"
                         
+                        logger.info(f"Chat message processed successfully in {latency:.2f}s")
                         # Return updated history and metrics
                         return history + [[message, result]], updated_metrics
                     except Exception as e:
+                        logger.error(f"Error processing chat message: {str(e)}", exc_info=True)
                         error_msg = f"Sorry, I encountered an error: {str(e)}"
                         return history + [[message, error_msg]], "Error: System unavailable. Please try again."
                 
@@ -173,7 +184,13 @@ def create_app():
                 def text_to_speech_conversion(history, voice_type, speed):
                     """Convert last bot message to speech."""
                     text = get_last_bot_message(history)
-                    return TTSService.process_audio(text, voice_type, speed)
+                    logger.info(f"Converting text to speech with voice: {voice_type}, speed: {speed}")
+                    result = TTSService.process_audio(text, voice_type, speed)
+                    if result[0] is None:
+                        logger.warning(f"TTS conversion failed: {result[1]}")
+                    else:
+                        logger.info("TTS conversion successful")
+                    return result
                 
                 # Helper function to update button states based on image presence
                 def update_button_state(image):
@@ -423,5 +440,8 @@ def create_app():
 
 # Run the application when directly executed
 if __name__ == "__main__":
+    logger.info("Starting HearSee application")
     app = create_app()
+    logger.info("Launching Gradio interface")
     app.launch(share=False, inbrowser=True)
+    logger.info("HearSee application stopped")

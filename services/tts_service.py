@@ -3,6 +3,7 @@
 import requests
 from tempfile import NamedTemporaryFile
 import os
+import logging
 
 from .replicate_service import ReplicateService
 from config.settings import (
@@ -11,6 +12,9 @@ from config.settings import (
     DEFAULT_VOICE, 
     DEFAULT_SPEED
 )
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
 
 # Module level functions (exported directly)
 def validate_voice_type(voice_type=None):
@@ -90,6 +94,21 @@ class TTSService:
         return max(min_speed, min(max_speed, float(speed)))
 
     @staticmethod
+    def _create_temp_audio_file(content):
+        """
+        Create a temporary audio file with the given content.
+        
+        Args:
+            content (bytes): Audio content to write to the file.
+            
+        Returns:
+            str: Path to the temporary file.
+        """
+        with NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+            temp_file.write(content)
+            return temp_file.name
+
+    @staticmethod
     def process_audio(text, voice_type=None, speed=None):
         """
         Process text to speech conversion.
@@ -122,10 +141,8 @@ class TTSService:
             # Download and save audio
             response = requests.get(audio_url)
             if response.status_code == 200:
-                with NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-                    temp_file.write(response.content)
-                    temp_path = temp_file.name
-
+                # Create temporary file
+                temp_path = TTSService._create_temp_audio_file(response.content)
                 return temp_path, f"Generated audio using {voice_type or DEFAULT_VOICE} voice at {safe_speed}x speed"
             else:
                 return None, f"Error downloading audio: HTTP status {response.status_code}"
@@ -145,4 +162,4 @@ class TTSService:
             if file_path and os.path.exists(file_path):
                 os.unlink(file_path)
         except Exception as e:
-            print(f"Error cleaning up audio file: {e}")
+            logger.error(f"Error cleaning up audio file: {e}", exc_info=True)

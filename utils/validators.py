@@ -6,6 +6,10 @@ and chat-related operations.
 """
 
 from typing import List, Union, Tuple
+import logging
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
 
 class Validators:
     @staticmethod
@@ -20,7 +24,9 @@ class Validators:
             tuple: A boolean indicating validity and an error message if invalid
         """
         if not message or message.strip() == "":
+            logger.warning("Empty message validation failed")
             return False, "Message cannot be empty"
+        logger.debug("Message validation passed")
         return True, ""
 
     @staticmethod
@@ -35,7 +41,9 @@ class Validators:
             tuple: A boolean indicating validity and an error message if invalid
         """
         if image is None:
+            logger.warning("Image validation failed: No image provided")
             return False, "An image is required. Please upload an image before sending a message."
+        logger.debug("Image validation passed")
         return True, ""
 
     @staticmethod
@@ -50,9 +58,12 @@ class Validators:
             list: Validated chat history
         """
         if history is None:
+            logger.debug("History validation: None provided, returning empty list")
             return []
         if not isinstance(history, list):
+            logger.warning(f"History validation: Invalid type {type(history)}, returning empty list")
             return []
+        logger.debug(f"History validation passed: {len(history)} entries")
         return history
 
     @staticmethod
@@ -67,7 +78,9 @@ class Validators:
             str: Last bot message or default message
         """
         if not history:
+            logger.debug("No chat history found for TTS conversion")
             return "No messages to convert to speech."
+        logger.debug("Retrieved last bot message for TTS conversion")
         return history[-1][1]
 
     @staticmethod
@@ -85,6 +98,7 @@ class Validators:
         """
         # Check text
         if not text or text.strip() == "":
+            logger.warning("TTS validation failed: No text provided")
             return False, "No text provided for speech conversion"
 
         # Validate speed if provided
@@ -92,10 +106,13 @@ class Validators:
             try:
                 speed_float = float(speed)
                 if speed_float < 0.5 or speed_float > 2.0:
+                    logger.warning(f"TTS validation failed: Speed {speed_float} out of range")
                     return False, "Speed must be between 0.5 and 2.0"
             except ValueError:
+                logger.warning(f"TTS validation failed: Invalid speed value '{speed}'")
                 return False, "Invalid speed value"
 
+        logger.debug(f"TTS validation passed: text length={len(text)}, voice={voice_type}, speed={speed}")
         return True, ""
 
 def validate_message(message: str) -> Tuple[bool, str]:
