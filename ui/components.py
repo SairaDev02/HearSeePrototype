@@ -34,7 +34,7 @@ def create_image_instruction():
     """
     return gr.HTML(
         """<div style="padding: 8px; margin: 8px 0; color: #ff5500; background-color: rgba(0, 0, 0, 0.25); border-radius: 4px; text-align: center;">
-        <b>⚠️ Please upload an image first to enable/renable chat functionality (Max 10MB size)</b>
+        <b>⚠️ Please upload an image first to enable chat functionality (Max 10MB size)</b>
         </div>"""
     )
 
