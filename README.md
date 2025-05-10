@@ -1,6 +1,6 @@
 # HearSee Documentation
 
-**Web Application Version:** 2.2.0
+**Web Application Version:** 2.2.1
 **Docs Version:** 1.0
 **Date:** May 10, 2025
 **Status:** Release
