@@ -1,7 +1,15 @@
 """
 Chat Interface Construction for HearSee Application.
 
-This module defines the layout and event handling for the main chat interface.
+This module defines the layout and event handling for the main chat interface
+of the HearSee application. It creates a Gradio-based UI with components for
+chat interaction, image upload and processing, and text-to-speech functionality.
+
+The interface is organized into logical sections:
+- Chat and messaging components
+- Image upload and processing controls
+- Text-to-speech controls and output
+- Status indicators
 """
 
 import gradio as gr
@@ -18,8 +26,17 @@ def create_interface():
     """
     Create the complete chat interface with all components and event handlers.
     
+    This is a module-level convenience function that delegates to the
+    ChatInterface class's static method.
+    
     Returns:
-        dict: A dictionary of Gradio components for the chat interface
+        dict: A dictionary of Gradio components for the chat interface,
+              keyed by component name for easy access and event binding.
+    
+    Example:
+        components = create_interface()
+        # Access specific component
+        chatbot = components["chatbot"]
     """
     return ChatInterface.create_interface()
 
@@ -29,15 +46,25 @@ class ChatInterface:
         """
         Create the complete chat interface with all components and event handlers.
         
+        This method constructs the entire UI layout using Gradio components,
+        organizing them into a logical structure with appropriate styling and
+        configuration.
+        
         Returns:
-            dict: A dictionary of Gradio components for the chat interface
+            dict: A dictionary of Gradio components for the chat interface,
+                  keyed by component name for easy access and event binding.
+        
+        Example:
+            components = ChatInterface.create_interface()
+            # Access specific component
+            chatbot = components["chatbot"]
         """
         with gr.Column():
-            # Chatbot and image instruction
-            chatbot = create_chatbot_component()
-            image_instruction = create_image_instruction()
+            # Main chat display and initial instruction message
+            chatbot = create_chatbot_component()  # Main chat history display
+            image_instruction = create_image_instruction()  # Warning to upload image first
 
-            # Message input and send button
+            # User input section with text field and send button
             with gr.Row():
                 msg = gr.Textbox(
                     label="Text Input",
@@ -46,53 +73,56 @@ class ChatInterface:
                     container=True,
                     show_label=False,
                 )
-                send_btn = gr.Button("Send", interactive=False)
+                send_btn = gr.Button("Send", interactive=False)  # Initially disabled until image upload
 
-            # Image and functional buttons
+            # Primary action buttons for image handling and chat management
             with gr.Row():
                 upload_btn = gr.UploadButton("📁 Upload Image", file_types=["image"], file_count="single")
                 regenerate_btn = gr.Button("🔄 Regenerate")
                 clear_btn = gr.Button("🗑️ Clear History")
 
-            # Image processing buttons
+            # Specialized image processing action buttons
+            # All initially disabled until an image is uploaded
             with gr.Row():
-                extract_btn = gr.Button("📝 Extract Text", interactive=False)
-                caption_btn = gr.Button("💭 Caption Image", interactive=False)
-                summarize_btn = gr.Button("📋 Summarize Image", interactive=False)
+                extract_btn = gr.Button("📝 Extract Text", interactive=False)  # OCR functionality
+                caption_btn = gr.Button("💭 Caption Image", interactive=False)  # Image description
+                summarize_btn = gr.Button("📋 Summarize Image", interactive=False)  # Detailed analysis
 
-            # Image display
+            # Image display gallery
+            # Uses 2 columns to allow for potential side-by-side comparison
             with gr.Row():
                 gallery = gr.Gallery(
                     label="Uploaded Image",
                     show_label=True,
-                    columns=2,
+                    columns=2,  # Support for before/after comparisons
                     rows=1,
-                    object_fit="scale-down",
+                    object_fit="scale-down",  # Maintains aspect ratio
                 )
 
-            # TTS section
+            # Text-to-Speech section header
             gr.Markdown("### Text-to-Speech Options")
 
-            # Audio output
+            # Audio playback component for TTS output
             with gr.Row():
                 audio_output = gr.Audio(label="Generated Speech", interactive=False)
 
-            # Voice type and speed controls
+            # TTS configuration controls
             with gr.Row():
-                voice_type = create_voice_type_dropdown()
-                speed = create_speed_slider()
-                tts_btn = gr.Button("🔊 Play Last Response")
+                voice_type = create_voice_type_dropdown()  # Voice selection
+                speed = create_speed_slider()  # Playback speed adjustment
+                tts_btn = gr.Button("🔊 Play Last Response")  # Trigger TTS generation
 
-            # Performance and status indicators
+            # System status indicators
             with gr.Row():
                 tts_status = gr.Textbox(
                     label="TTS Status",
                     interactive=False,
-                    value="Idle"
+                    value="Idle"  # Default state
                 )
-                performance_metrics = create_mllm_status()
+                performance_metrics = create_mllm_status()  # Multimodal LLM performance tracking
 
-            # Components to be returned for event binding
+            # Return all components in a dictionary for easy access and event binding in app.py
+            # This allows the main application to connect these UI elements to backend functionality
             return {
                 "chatbot": chatbot,
                 "msg": msg,

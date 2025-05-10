@@ -1,7 +1,15 @@
 """
 Guide Interface Module for HearSee Application.
 
-This module provides a comprehensive guide and documentation for the application.
+This module provides a comprehensive guide and documentation for the HearSee
+application. It creates a Markdown-based help interface that explains all
+features, functionality, and technical details of the application to users.
+
+The guide includes sections on:
+- Image upload and analysis features
+- Chat functionality
+- Text-to-speech options
+- Technical details and troubleshooting
 """
 
 import gradio as gr
@@ -11,8 +19,19 @@ def create_guide_interface():
     """
     Create the guide interface for the application.
     
+    This is a module-level convenience function that delegates to the
+    GuideInterface class's static method.
+    
     Returns:
-        gr.Markdown: Markdown guide component
+        gr.Markdown: Markdown guide component with formatted documentation
+    
+    Example:
+        guide = create_guide_interface()
+        # Can be added to a Gradio interface
+        with gr.Blocks() as demo:
+            guide_tab = gr.Tab("Help")
+            with guide_tab:
+                guide
     """
     return GuideInterface.create_guide()
 
@@ -22,9 +41,22 @@ class GuideInterface:
         """
         Create the guide interface with detailed information about the application.
         
+        This method generates a comprehensive Markdown document that serves as
+        the user manual for the HearSee application. It includes instructions
+        for all features, technical details, and troubleshooting information.
+        
         Returns:
-            gr.Markdown: Markdown component with application guide
+            gr.Markdown: Markdown component with formatted application guide
+        
+        Example:
+            guide = GuideInterface.create_guide()
+            # Can be added to a Gradio interface
+            with gr.Blocks() as demo:
+                with gr.Tab("Help"):
+                    guide
         """
+        # Create a comprehensive user guide with markdown formatting
+        # The guide is structured in sections with clear headings and emoji for visual appeal
         return gr.Markdown("""
         # HearSee Web Application Guide
 

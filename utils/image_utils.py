@@ -2,7 +2,11 @@
 Utility functions for image processing and handling.
 
 This module contains utilities for image operations including base64 conversion,
-text extraction, captioning, and summarization.
+text extraction, captioning, and summarization. It provides a unified interface
+for interacting with vision models through the ReplicateService.
+
+Classes:
+    ImageUtils: Static methods for various image processing operations.
 """
 
 import time
@@ -19,12 +23,27 @@ class ImageUtils:
         """
         Extract text from image using Qwen VL model.
         
+        This function processes an image to extract any visible text content using
+        a vision-language model. It handles image validation, conversion to base64,
+        and error handling.
+        
         Args:
-            image: Image to process
-            history: Optional chat history
+            image: The image object to process (PIL.Image or similar)
+            history: Optional chat history list of [user_msg, bot_msg] pairs. Defaults to None.
             
         Returns:
-            tuple: Updated history and status message
+            tuple: (updated_history, metrics_message)
+                - updated_history: List of conversation turns with the new extraction result
+                - metrics_message: String with performance metrics or error message
+                
+        Raises:
+            Exception: Passes through any exceptions from underlying services,
+                       but catches them for graceful error handling
+                       
+        Example:
+            >>> history, metrics = ImageUtils.extract_text(my_image)
+            >>> print(metrics)
+            'Latency: 2.34s | Words: 156'
         """
         logger.info("Starting text extraction from image")
         start_time = time.time()
@@ -33,7 +52,7 @@ class ImageUtils:
             logger.warning(f"Image size validation failed: {size_msg}")
             return [[None, size_msg]], "Error: Image too large"
 
-# Removed redundant check for `image is None` as `verify_image_size` already handles this case.
+        # Image validation is handled by verify_image_size which checks for None and size limits
 
         try:
             logger.debug("Converting image to base64")
@@ -42,6 +61,7 @@ class ImageUtils:
                 logger.error("Failed to convert image to base64")
                 return [[None, "Error processing the image."]], "Error: Metrics unavailable"
 
+            # Craft specialized prompts for the vision model to optimize text extraction
             system_prompt = "You are a helpful AI assistant specializing in extracting text from images."
             user_prompt = "Extract and transcribe all text visible in this image. Be thorough and precise."
             
@@ -50,7 +70,7 @@ class ImageUtils:
                 f"{system_prompt}\n\n{user_prompt}", image_base64=img_str
             )
 
-            # Calculate metrics
+            # Calculate performance metrics to provide feedback to the user
             latency = time.time() - start_time
             word_count = len(result.split())
             metrics = f"Latency: {latency:.2f}s | Words: {word_count}"
@@ -70,14 +90,29 @@ class ImageUtils:
     @staticmethod
     def caption_image(image, history=None):
         """
-        Generate caption for image using Qwen VL model.
+        Generate detailed caption for image using Qwen VL model.
+        
+        This function processes an image to create a comprehensive description
+        using a vision-language model. It handles image validation, conversion
+        to base64, and error handling.
         
         Args:
-            image: Image to process
-            history: Optional chat history
+            image: The image object to process (PIL.Image or similar)
+            history: Optional chat history list of [user_msg, bot_msg] pairs. Defaults to None.
             
         Returns:
-            tuple: Updated history and status message
+            tuple: (updated_history, metrics_message)
+                - updated_history: List of conversation turns with the new caption
+                - metrics_message: String with performance metrics or error message
+                
+        Raises:
+            Exception: Passes through any exceptions from underlying services,
+                       but catches them for graceful error handling
+                       
+        Example:
+            >>> history, metrics = ImageUtils.caption_image(my_image)
+            >>> print(metrics)
+            'Latency: 3.12s | Words: 203'
         """
         logger.info("Starting image captioning")
         start_time = time.time()
@@ -93,6 +128,7 @@ class ImageUtils:
                 logger.error("Failed to convert image to base64")
                 return [[None, "Error processing the image."]], "Error: Status unavailable. Please try again."
 
+            # Craft specialized prompts for the vision model to optimize detailed image description
             system_prompt = "You are a helpful AI assistant specializing in describing images in detail."
             user_prompt = "Describe this image in detail, including objects, people, scenery, colors, and composition."
 
@@ -121,14 +157,29 @@ class ImageUtils:
     @staticmethod
     def summarize_image(image, history=None):
         """
-        Generate summary for image using Qwen VL model.
+        Generate contextual summary for image using Qwen VL model.
+        
+        This function processes an image to create a comprehensive contextual
+        summary using a vision-language model. It focuses on analyzing the
+        image content and providing a concise summary of key elements.
         
         Args:
-            image: Image to process
-            history: Optional chat history
+            image: The image object to process (PIL.Image or similar)
+            history: Optional chat history list of [user_msg, bot_msg] pairs. Defaults to None.
             
         Returns:
-            tuple: Updated history and status message
+            tuple: (updated_history, metrics_message)
+                - updated_history: List of conversation turns with the new summary
+                - metrics_message: String with performance metrics or error message
+                
+        Raises:
+            Exception: Passes through any exceptions from underlying services,
+                       but catches them for graceful error handling
+                       
+        Example:
+            >>> history, metrics = ImageUtils.summarize_image(my_image)
+            >>> print(metrics)
+            'Latency: 2.87s | Words: 178'
         """
         logger.info("Starting image summarization")
         start_time = time.time()
@@ -144,6 +195,7 @@ class ImageUtils:
                 logger.error("Failed to convert image to base64")
                 return [[None, "Error processing the image."]], "Error: Metrics unavailable"
 
+            # Single comprehensive prompt for image summarization
             prompt = "Analyze this image and provide a comprehensive contextual summary including objects, people, activities, environment, colors, and mood."
 
             logger.debug("Calling vision model for image summarization")

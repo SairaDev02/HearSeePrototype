@@ -1,4 +1,9 @@
-"""Service for handling Replicate API interactions."""
+"""Service for handling Replicate API interactions.
+
+This module provides functionality for interacting with Replicate's API,
+specifically for running vision and text-to-speech models. It handles
+API validation, parameter preparation, and error handling.
+"""
 
 import os
 import replicate
@@ -24,6 +29,11 @@ def verify_api_available():
     
     Returns:
         tuple: A boolean indicating API availability and an error message if not available.
+        
+    Example:
+        >>> available, error = verify_api_available()
+        >>> if not available:
+        >>>     print(error)
     """
     return ReplicateService.verify_api_available()
 
@@ -38,6 +48,14 @@ def run_vision_model(prompt, image_base64=None, max_tokens=DEFAULT_MAX_TOKENS):
     
     Returns:
         str: Model's text response.
+        
+    Raises:
+        ValueError: If API token is not available.
+        RuntimeError: If model execution fails.
+        
+    Example:
+        >>> response = run_vision_model("Describe this image", image_base64_string)
+        >>> print(response)
     """
     return ReplicateService.run_vision_model(prompt, image_base64, max_tokens)
 
@@ -52,6 +70,14 @@ def run_tts_model(text, voice_id, speed):
     
     Returns:
         str: URL of generated audio.
+        
+    Raises:
+        ValueError: If API token is not available.
+        RuntimeError: If model execution fails.
+        
+    Example:
+        >>> audio_url = run_tts_model("Hello world", "male_1", 1.0)
+        >>> print(f"Audio available at: {audio_url}")
     """
     return ReplicateService.run_tts_model(text, voice_id, speed)
 
@@ -63,6 +89,11 @@ class ReplicateService:
         
         Returns:
             tuple: A boolean indicating API availability and an error message if not available.
+            
+        Example:
+            >>> available, error = ReplicateService.verify_api_available()
+            >>> if not available:
+            >>>     print(error)
         """
         if "REPLICATE_API_TOKEN" not in os.environ:
             logger.error("Replicate API token not found in environment variables")
@@ -82,6 +113,14 @@ class ReplicateService:
         
         Returns:
             str: Model's text response.
+            
+        Raises:
+            ValueError: If API token is not available.
+            RuntimeError: If model execution fails.
+            
+        Example:
+            >>> response = ReplicateService.run_vision_model("Describe this image", image_base64_string)
+            >>> print(response)
         """
         # Validate API availability before running
         api_available, error_msg = ReplicateService.verify_api_available()
@@ -107,6 +146,9 @@ class ReplicateService:
             logger.debug(f"Calling Replicate API with model: {QWEN_VL_MODEL}")
             output = replicate.run(QWEN_VL_MODEL, input=api_params)
             logger.info("Vision model API call completed successfully")
+            
+            # Replicate may return output as a list of string chunks or a single string
+            # We join the chunks if it's a list, otherwise return as is
             return "".join(output) if isinstance(output, list) else output
         except Exception as e:
             logger.error(f"Error running vision model: {str(e)}", exc_info=True)
@@ -124,6 +166,14 @@ class ReplicateService:
         
         Returns:
             str: URL of generated audio.
+            
+        Raises:
+            ValueError: If API token is not available.
+            RuntimeError: If model execution fails.
+            
+        Example:
+            >>> audio_url = ReplicateService.run_tts_model("Hello world", "male_1", 1.0)
+            >>> print(f"Audio available at: {audio_url}")
         """
         # Validate API availability before running
         api_available, error_msg = ReplicateService.verify_api_available()
@@ -135,12 +185,13 @@ class ReplicateService:
             logger.info(f"Running TTS model with voice: {voice_id}, speed: {speed}")
             logger.debug(f"Text length for TTS: {len(text)} characters")
             
+            # Configure TTS model parameters
             output = replicate.run(
                 KOKORO_TTS_MODEL,
                 input={
-                    "text": text,
-                    "voice": voice_id,
-                    "speed": speed
+                    "text": text,      # The text content to convert to speech
+                    "voice": voice_id, # The voice identifier to use
+                    "speed": speed     # The playback speed factor
                 }
             )
             logger.info("TTS model API call completed successfully")
