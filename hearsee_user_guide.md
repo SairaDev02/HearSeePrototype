@@ -1,8 +1,8 @@
 # HearSee User Guide
 
-**Version:** 1.0  
-**Date:** May 10, 2025  
-**Status:** Release  
+**Version:** 1.0
+**Date:** May 10, 2025
+**Status:** Release
 
 ---
 
@@ -74,8 +74,6 @@
 - [12. Glossary of Terms](#12-glossary-of-terms)
 - [13. Additional Resources](#13-additional-resources)
   - [13.1 Related Documentation](#131-related-documentation)
-  - [13.2 Community Resources](#132-community-resources)
-  - [13.3 Contact Information](#133-contact-information)
 
 ---
 
@@ -1324,57 +1322,3 @@ For more information about the technologies and components used in HearSee, refe
   - [Pillow (Python Imaging Library)](https://pillow.readthedocs.io/)
   - [Requests Library](https://requests.readthedocs.io/)
   - [Python-dotenv](https://github.com/theskumar/python-dotenv)
-
-### 13.2 Community Resources
-
-Connect with other HearSee users and developers:
-
-- **GitHub Repository**
-  - [HearSee GitHub](https://github.com/yourusername/hearsee)
-  - [Issue Tracker](https://github.com/yourusername/hearsee/issues)
-  - [Discussions](https://github.com/yourusername/hearsee/discussions)
-
-- **Community Channels**
-  - [Discord Server](https://discord.gg/hearsee)
-  - [Reddit Community](https://reddit.com/r/hearsee)
-
-- **Tutorials and Guides**
-  - [Getting Started with HearSee (Video Tutorial)](https://youtube.com/watch?v=hearsee-tutorial)
-  - [Advanced HearSee Techniques](https://medium.com/hearsee-advanced-guide)
-  - [HearSee for Educators](https://hearsee.io/education)
-
-### 13.3 Contact Information
-
-For additional support or inquiries:
-
-- **Technical Support**
-  - Email: support@hearsee.io
-  - Support Hours: Monday-Friday, 9 AM - 5 PM EST
-
-- **Feature Requests and Feedback**
-  - [Feedback Form](https://forms.hearsee.io/feedback)
-  - [Feature Request Board](https://hearsee.io/requests)
-
-- **Business and Partnership Inquiries**
-  - Email: partnerships@hearsee.io
-
-- **Security Issues**
-  - For security-related concerns, please email security@hearsee.io
-  - For responsible disclosure of vulnerabilities, see our [Security Policy](https://hearsee.io/security)
-
-> [!NOTE]
-> The links and contact information provided in this section are placeholders. Replace them with actual resources when they become available.
-- TalkBack (Android, for mobile access)
-
-### 9.5 Accessibility Best Practices
-
-When using HearSee, consider these best practices for an accessible experience:
-
-- **Image Descriptions**: When discussing images, the AI can provide detailed descriptions, which is helpful for users who cannot see the image clearly.
-- **Text Extraction**: The text extraction feature can make text in images accessible to screen readers.
-- **Conversation History**: The maintained conversation history allows users to review previous interactions at their own pace.
-- **Progressive Disclosure**: Information is presented in manageable chunks to avoid cognitive overload.
-- **Multiple Modalities**: Information is available in both text and audio formats, accommodating different preferences and needs.
-
-> [!IMPORTANT]
-> If you encounter accessibility issues while using HearSee, please report them so they can be addressed in future updates.
