@@ -124,9 +124,6 @@ class TestResponsiveDesign:
             # Verify the interface uses a column-based layout which works well on mobile
             assert mock_column.called, "Interface should use Column for mobile-friendly layout"
             
-            # Verify the interface uses a column-based layout which works well on mobile
-            assert mock_column.called, "Interface should use Column for mobile-friendly layout"
-            
             # Instead of checking mock_row.mock_calls, check if Button was called
             # This is more reliable since we're mocking the Button directly
             assert mock_row.called, "Interface should use Row for mobile-friendly layout"
