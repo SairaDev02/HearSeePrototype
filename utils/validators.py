@@ -155,6 +155,8 @@ class Validators:
         Checks if the text is not empty and validates the speech speed
         if provided, ensuring it's within acceptable range (0.5 to 2.0).
         Also validates that the voice type is one of the supported voices.
+        The valid voice types are defined in `config.settings.VOICE_TYPES`.
+        If the provided `voice_type` is not in this list, the validation will fail.
         
         Args:
             text (str): Text to convert to speech
