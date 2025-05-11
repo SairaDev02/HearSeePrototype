@@ -140,7 +140,8 @@ def create_mllm_status():
     return gr.Textbox(
         label="MLLM Status",  # Multimodal Language Model status
         value="Idle",         # Default state when no processing is happening
-        interactive=False     # Read-only display
+        interactive=False,    # Read-only display
+        scale=1              # Add scale parameter for responsive sizing
     )
 
 # Add more component creation functions as needed

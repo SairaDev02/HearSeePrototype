@@ -13,21 +13,8 @@ import base64
 from PIL import Image
 import numpy as np
 
-# Exclude failing tests from collection
-def pytest_collection_modifyitems(config, items):
-    """Modify the collected test items to exclude failing tests."""
-    skip_tests = [
-        "test_log_directory_creation",
-        "test_console_handler_configuration",
-        "test_file_handlers_configuration"
-    ]
-    
-    for item in items[:]:
-        if item.name in skip_tests and (
-            "TestLoggingConfig" in item.nodeid or
-            "TestLogger" in item.nodeid
-        ):
-            items.remove(item)
+# No longer excluding any tests from collection
+# All tests should now run successfully
 
 # Mock environment variables
 @pytest.fixture

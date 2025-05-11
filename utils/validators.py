@@ -154,6 +154,7 @@ class Validators:
         
         Checks if the text is not empty and validates the speech speed
         if provided, ensuring it's within acceptable range (0.5 to 2.0).
+        Also validates that the voice type is one of the supported voices.
         
         Args:
             text (str): Text to convert to speech
@@ -177,6 +178,13 @@ class Validators:
         if not text or text.strip() == "":
             logger.warning("TTS validation failed: No text provided")
             return False, "No text provided for speech conversion"
+
+        # Validate voice type if provided
+        if voice_type is not None:
+            from config.settings import VOICE_TYPES
+            if voice_type not in VOICE_TYPES:
+                logger.warning(f"TTS validation failed: Invalid voice type '{voice_type}'")
+                return False, f"Invalid voice type: {voice_type}. Valid options are: {', '.join(VOICE_TYPES.keys())}"
 
         # Validate speed if provided
         if speed is not None:

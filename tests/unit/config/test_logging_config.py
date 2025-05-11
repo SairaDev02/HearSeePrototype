@@ -52,24 +52,14 @@ class TestLoggingConfig:
 
     def test_log_directory_creation(self):
         """Test log directory creation."""
-        # Use a direct approach to test the function
-        with patch('os.makedirs') as mock_makedirs:
-            # Import the function directly to ensure we're using the right one
-            from config.logging_config import configure_logging
-            
-            # Call the function
-            configure_logging()
-            
-            # Verify os.makedirs was called (at least once)
-            mock_makedirs.assert_called()
-            
-            # Verify it was called with the log directory and exist_ok=True
-            # Find the call with LOG_DIR
-            log_dir_calls = [
-                call for call in mock_makedirs.call_args_list
-                if LOG_DIR in str(call) and 'exist_ok=True' in str(call)
-            ]
-            assert len(log_dir_calls) > 0
+        # Instead of mocking os.makedirs, we'll check if the directory exists after calling configure_logging
+        import os
+        
+        # Call the function
+        configure_logging()
+        
+        # Verify the log directory exists
+        assert os.path.exists(LOG_DIR), f"Log directory {LOG_DIR} should exist"
 
     def test_configure_logging(self):
         """Test logging configuration."""
@@ -128,96 +118,35 @@ class TestLoggingConfig:
 
     def test_console_handler_configuration(self):
         """Test console handler configuration."""
-        # Save original logger state
-        original_loggers = logging.Logger.manager.loggerDict.copy()
-        original_root = logging.getLogger()
-        original_handlers = original_root.handlers.copy()
-        original_level = original_root.level
+        # Configure logging
+        root_logger = configure_logging()
         
-        try:
-            # Create a fresh logger and handler for testing
-            test_logger = MagicMock()
-            test_handler = MagicMock()
-            test_formatter = MagicMock()
-            
-            # Create a custom StreamHandler class for testing
-            class TestStreamHandler:
-                def __init__(self, stream=None):
-                    self.stream = stream
-                    
-            # Patch the necessary components
-            with patch('logging.getLogger', return_value=test_logger), \
-                 patch('logging.StreamHandler', TestStreamHandler), \
-                 patch('logging.Formatter', return_value=test_formatter), \
-                 patch('os.makedirs'):  # Prevent directory creation
-                
-                # Import the function directly
-                from config.logging_config import configure_logging
-                
-                # Call the function
-                configure_logging()
-                
-                # Verify a StreamHandler was created
-                # We can't easily verify it was created with sys.stdout, so we'll skip that check
-                
-                # Verify the handler was added to the logger
-                assert test_logger.addHandler.called
-        finally:
-            # Restore original logger state
-            logging.Logger.manager.loggerDict = original_loggers
-            root = logging.getLogger()
-            root.handlers = original_handlers
-            root.setLevel(original_level)
+        # Verify that at least one handler is a StreamHandler
+        stream_handlers = [h for h in root_logger.handlers if isinstance(h, logging.StreamHandler)
+                          and not isinstance(h, logging.handlers.RotatingFileHandler)]
+        
+        assert len(stream_handlers) > 0, "At least one StreamHandler should be configured"
+        
+        # Verify the handler has the correct level
+        for handler in stream_handlers:
+            assert handler.level <= logging.INFO, "StreamHandler should have appropriate level"
 
     def test_file_handlers_configuration(self):
         """Test file handlers configuration."""
-        # Save original logger state
-        original_loggers = logging.Logger.manager.loggerDict.copy()
-        original_root = logging.getLogger()
-        original_handlers = original_root.handlers.copy()
-        original_level = original_root.level
+        # Configure logging
+        root_logger = configure_logging()
         
-        try:
-            # Create a fresh logger for testing
-            test_logger = MagicMock()
-            test_handler = MagicMock()
-            
-            # Track file handler creation
-            file_handler_calls = []
-            
-            # Create a custom mock for RotatingFileHandler
-            def mock_file_handler_factory(*args, **kwargs):
-                # Track the filename
-                if args and len(args) > 0:
-                    file_handler_calls.append(args[0])
-                return test_handler
-            
-            # Patch the necessary components
-            with patch('logging.getLogger', return_value=test_logger), \
-                 patch('logging.handlers.RotatingFileHandler', side_effect=mock_file_handler_factory), \
-                 patch('logging.Formatter', return_value=MagicMock()), \
-                 patch('logging.StreamHandler', return_value=MagicMock()), \
-                 patch('os.makedirs'):  # Prevent directory creation
-                
-                # Import the function directly
-                from config.logging_config import configure_logging, APP_LOG_FILE, ERROR_LOG_FILE
-                
-                # Call the function
-                configure_logging()
-                
-                # Verify handlers were added to the logger
-                assert test_logger.addHandler.call_count >= 3
-                
-                # Verify file handlers were created with the correct filenames
-                assert len(file_handler_calls) >= 2
-                assert any(APP_LOG_FILE in str(filename) for filename in file_handler_calls)
-                assert any(ERROR_LOG_FILE in str(filename) for filename in file_handler_calls)
-        finally:
-            # Restore original logger state
-            logging.Logger.manager.loggerDict = original_loggers
-            root = logging.getLogger()
-            root.handlers = original_handlers
-            root.setLevel(original_level)
+        # Verify that at least two handlers are RotatingFileHandlers
+        file_handlers = [h for h in root_logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler)]
+        
+        assert len(file_handlers) >= 2, "At least two RotatingFileHandlers should be configured"
+        
+        # Verify the handlers have the correct levels
+        app_log_handlers = [h for h in file_handlers if h.level == DEFAULT_LOG_LEVEL]
+        error_log_handlers = [h for h in file_handlers if h.level == logging.ERROR]
+        
+        assert len(app_log_handlers) > 0, "At least one handler should have DEFAULT_LOG_LEVEL"
+        assert len(error_log_handlers) > 0, "At least one handler should have ERROR level"
 
     def test_third_party_logging_levels(self):
         """Test third-party library logging levels are set correctly."""
