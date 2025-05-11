@@ -84,6 +84,10 @@ class ImageUtils:
         except Exception as e:
             logger.error(f"Error extracting text from image: {str(e)}", exc_info=True)
             error_message = f"Error extracting text: {str(e)}"
+            
+            # Check if the error is related to image validation
+            if "Error checking image size" in str(e):
+                error_message = f"Error extracting text: {str(e)}"
             history = [] if history is None else history
             return history + [[None, error_message]], "Error: Status unavailable. Please try again."
 

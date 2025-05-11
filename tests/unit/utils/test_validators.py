@@ -76,7 +76,10 @@ class TestValidators:
 
     def test_validate_tts_input_valid(self):
         """Test TTS input validation with valid inputs."""
-        valid, error = validate_tts_input("This is a test message.", "Female Voice", 1.0)
+        # Use a voice type that exists in VOICE_TYPES
+        from config.settings import VOICE_TYPES
+        valid_voice = list(VOICE_TYPES.keys())[0]  # Get the first valid voice type
+        valid, error = validate_tts_input("This is a test message.", valid_voice, 1.0)
         assert valid is True
         assert error == ""
 

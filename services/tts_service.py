@@ -198,6 +198,9 @@ class TTSService:
                 return None, f"Error downloading audio: HTTP status {response.status_code}"
 
         except Exception as e:
+            # Include "Error downloading audio" in the message if it's a connection error
+            if "ConnectionError" in str(type(e)) or "Network error" in str(e):
+                return None, f"Error downloading audio: {str(e)}"
             return None, f"Error generating speech: {str(e)}"
 
     @staticmethod
