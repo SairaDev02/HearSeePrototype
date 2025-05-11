@@ -10,3 +10,4 @@ htmlcov/
 .pytest_cache/
 # ignore python cache files
 __pycache__/
+utils/__pycache__/
