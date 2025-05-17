@@ -17,102 +17,83 @@ The diagram uses standard SSADM notation:
 
 ## Level 1 DFD
 
-```plantuml
-@startuml HearSee Level 1 DFD
-!define PROCESS circle
-!define ENTITY rectangle
-!define DATASTORE database
-
-' Styling
-skinparam backgroundColor white
-skinparam roundCorner 15
-skinparam ArrowColor black
-skinparam ArrowThickness 1.5
-
-skinparam process {
-  BackgroundColor #FFA07A
-  BorderColor #333333
-  FontColor black
-}
-
-skinparam rectangle {
-  BackgroundColor white
-  BorderColor #333333
-  FontColor black
-}
-
-skinparam database {
-  BackgroundColor white
-  BorderColor #333333
-  FontColor black
-}
-
-' External Entities
-ENTITY "User" as User
-ENTITY "Replicate API" as ReplicateAPI
-
-' Processes
-PROCESS "1. User Interface\nManagement" as P1
-PROCESS "2. Image\nProcessing" as P2
-PROCESS "3. Chat\nProcessing" as P3
-PROCESS "4. Vision Model\nIntegration" as P4
-PROCESS "5. Text-to-Speech\nProcessing" as P5
-PROCESS "6. System\nConfiguration" as P6
-
-' Data Stores
-DATASTORE "D1: Temporary Files" as DS1
-DATASTORE "D2: Session State" as DS2
-
-' Data Flows - User to System
-User --> P1 : Image Upload
-User --> P1 : Text Input
-User --> P1 : TTS Settings
-User --> P1 : UI Commands
-
-' Data Flows - System to User
-P1 --> User : Image Display
-P1 --> User : Text Response
-P1 --> User : Audio Playback
-P1 --> User : Status Updates
-
-' Data Flows - Internal Processes
-P1 --> P2 : Image Data
-P1 --> P3 : User Message
-P1 --> P5 : Voice Type, Speed
-P1 --> P2 : Command Type
-P1 --> P3 : Command Type
-
-P2 --> P4 : Processed Image
-P2 --> P3 : Image Metadata
-
-P3 --> P4 : Prompt + Context
-P3 --> P1 : Response Text
-P3 --> P5 : Text for TTS
-
-P4 --> ReplicateAPI : Vision API Request
-ReplicateAPI --> P4 : Vision API Response
-P4 --> P3 : Model Response
-
-P5 --> ReplicateAPI : TTS API Request
-ReplicateAPI --> P5 : TTS Audio URL
-P5 --> P1 : Audio File Path
-
-' Data Flows - Data Stores
-P5 --> DS1 : Store Audio File
-DS1 --> P5 : Retrieve Audio File
-
-P1 --> DS2 : Update State
-P2 --> DS2 : Update State
-P3 --> DS2 : Update State
-DS2 --> P1 : Retrieve State
-DS2 --> P3 : Retrieve State
-
-P6 --> P1 : Config Parameters
-P6 --> P2 : Config Parameters
-P6 --> P3 : Config Parameters
-P6 --> P4 : Config Parameters
-P6 --> P5 : Config Parameters
-@enduml
+```mermaid
+flowchart TD
+    %% Styling
+    classDef process fill:#FFA07A,stroke:#333333,color:black,rx:15,ry:15
+    classDef entity fill:white,stroke:#333333,color:black
+    classDef datastore fill:white,stroke:#333333,color:black
+    
+    %% External Entities
+    User[User]
+    ReplicateAPI[Replicate API]
+    
+    %% Processes
+    P1((1. User Interface<br>Management))
+    P2((2. Image<br>Processing))
+    P3((3. Chat<br>Processing))
+    P4((4. Vision Model<br>Integration))
+    P5((5. Text-to-Speech<br>Processing))
+    P6((6. System<br>Configuration))
+    
+    %% Data Stores
+    DS1[(D1: Temporary Files)]
+    DS2[(D2: Session State)]
+    
+    %% Data Flows - User to System
+    User -->|Image Upload| P1
+    User -->|Text Input| P1
+    User -->|TTS Settings| P1
+    User -->|UI Commands| P1
+    
+    %% Data Flows - System to User
+    P1 -->|Image Display| User
+    P1 -->|Text Response| User
+    P1 -->|Audio Playback| User
+    P1 -->|Status Updates| User
+    
+    %% Data Flows - Internal Processes
+    P1 -->|Image Data| P2
+    P1 -->|User Message| P3
+    P1 -->|Voice Type, Speed| P5
+    P1 -->|Command Type| P2
+    P1 -->|Command Type| P3
+    
+    P2 -->|Processed Image| P4
+    P2 -->|Image Metadata| P3
+    
+    P3 -->|Prompt + Context| P4
+    P3 -->|Response Text| P1
+    P3 -->|Text for TTS| P5
+    
+    P4 -->|Vision API Request| ReplicateAPI
+    ReplicateAPI -->|Vision API Response| P4
+    P4 -->|Model Response| P3
+    
+    P5 -->|TTS API Request| ReplicateAPI
+    ReplicateAPI -->|TTS Audio URL| P5
+    P5 -->|Audio File Path| P1
+    
+    %% Data Flows - Data Stores
+    P5 -->|Store Audio File| DS1
+    DS1 -->|Retrieve Audio File| P5
+    
+    P1 -->|Update State| DS2
+    P2 -->|Update State| DS2
+    P3 -->|Update State| DS2
+    DS2 -->|Retrieve State| P1
+    DS2 -->|Retrieve State| P3
+    
+    P6 -->|Config Parameters| P1
+    P6 -->|Config Parameters| P2
+    P6 -->|Config Parameters| P3
+    P6 -->|Config Parameters| P4
+    P6 -->|Config Parameters| P5
+    
+    %% Apply classes
+    class P1,P2,P3,P4,P5,P6 process
+    class User,ReplicateAPI entity
+    class DS1,DS2 datastore
 ```
 
 ### Process Descriptions
