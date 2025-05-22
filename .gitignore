@@ -11,3 +11,5 @@ htmlcov/
 # ignore python cache files
 __pycache__/
 utils/__pycache__/
+# ignore rooroo
+.roomodes
