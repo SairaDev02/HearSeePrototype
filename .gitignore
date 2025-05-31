@@ -13,3 +13,4 @@ __pycache__/
 utils/__pycache__/
 # ignore rooroo
 .roomodes
+.vscode/
