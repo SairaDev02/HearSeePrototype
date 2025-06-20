@@ -97,7 +97,3 @@ The testing framework is designed to provide comprehensive coverage of the appli
 - Service modules (image, replicate, TTS)
 - Utility functions (validators, image processing)
 - Error handling and edge cases
-
-## Continuous Integration
-
-These tests are designed to be run as part of a CI/CD pipeline. The test suite should be run before merging changes to ensure code quality and prevent regressions.

@@ -104,7 +104,7 @@ class ChatInterface:
 
             # Audio playback component for TTS output
             with gr.Row():
-                audio_output = gr.Audio(label="Generated Speech", interactive=False)
+                audio_output = gr.Audio(label="Generated Speech", interactive=False, show_share_button=False)
 
             # TTS configuration controls
             with gr.Row():

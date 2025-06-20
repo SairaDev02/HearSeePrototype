@@ -46,7 +46,8 @@ def create_chatbot_component():
         show_copy_all_button=True,  # Allow copying entire conversation
         min_height="500px",  # Ensure sufficient vertical space
         elem_classes="chatbox-style",  # Custom CSS class for styling
-        layout="bubble"  # Modern chat bubble style
+        layout="bubble",  # Modern chat bubble style
+        show_share_button=False  # Disable sharing button - irrelevant for this use case
     )
 
 def create_image_instruction():
