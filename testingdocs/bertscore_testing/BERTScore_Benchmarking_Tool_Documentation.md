@@ -1,0 +1,3 @@
+# HearSee BERTScore Benchmarking Tool: What, Why, and How
+
+The HearSee BERTScore Benchmarking Tool is a custom command-line utility for the HearSee project that computes semantic similarity between reference and candidate texts using transformer-based embeddings. It addresses the limitations of traditional lexical metrics by leveraging contextual understanding from models like BERT and RoBERTa, providing evaluations that better align with human judgments. The tool works by processing various input formats (text, JSON, CSV), generating embeddings through the specified model, computing token-level similarities, and producing precision, recall, and F1 scores along with visualizations. From the visualizations, we can gain insights into the quality of the generated text.
