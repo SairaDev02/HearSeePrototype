@@ -104,7 +104,7 @@ class ChatInterface:
 
             # Audio playback component for TTS output
             with gr.Row():
-                audio_output = gr.Audio(label="Generated Speech", interactive=False)
+                audio_output = gr.Audio(label="Generated Speech", interactive=False, show_share_button=False)
 
             # TTS configuration controls
             with gr.Row():
@@ -117,9 +117,10 @@ class ChatInterface:
                 tts_status = gr.Textbox(
                     label="TTS Status",
                     interactive=False,
-                    value="Idle"  # Default state
+                    value="Idle",  # Default state
+                    scale=1  # Add scale parameter for responsive sizing
                 )
-                performance_metrics = create_mllm_status()  # Multimodal LLM performance tracking
+                performance_metrics = create_mllm_status()  # Multimodal LLM performance tracking with scale parameter
 
             # Return all components in a dictionary for easy access and event binding in app.py
             # This allows the main application to connect these UI elements to backend functionality

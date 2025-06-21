@@ -76,7 +76,7 @@ class TestImageUtils:
         
         # Verify the result
         assert len(history) == 1
-        assert history[0][0] == "Please describe this image in detail."
+        assert history[0][0] == "Create a concise caption for this image."
         assert history[0][1] == "This is a detailed caption for the image."
         assert "Latency" in metrics
         assert "Words" in metrics
@@ -126,7 +126,7 @@ class TestImageUtils:
         
         # Verify the result
         assert len(history) == 1
-        assert history[0][0] == "Please provide a comprehensive summary of this image."
+        assert history[0][0] == "Please provide a concise summary of this image."
         assert history[0][1] == "This is a comprehensive summary of the image."
         assert "Latency" in metrics
         assert "Words" in metrics

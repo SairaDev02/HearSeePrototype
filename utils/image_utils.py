@@ -84,6 +84,10 @@ class ImageUtils:
         except Exception as e:
             logger.error(f"Error extracting text from image: {str(e)}", exc_info=True)
             error_message = f"Error extracting text: {str(e)}"
+            
+            # Check if the error is related to image validation
+            if "Error checking image size" in str(e):
+                error_message = f"Error extracting text: {str(e)}"
             history = [] if history is None else history
             return history + [[None, error_message]], "Error: Status unavailable. Please try again."
 
@@ -128,9 +132,9 @@ class ImageUtils:
                 logger.error("Failed to convert image to base64")
                 return [[None, "Error processing the image."]], "Error: Status unavailable. Please try again."
 
-            # Craft specialized prompts for the vision model to optimize detailed image description
-            system_prompt = "You are a helpful AI assistant specializing in describing images in detail."
-            user_prompt = "Describe this image in detail, including objects, people, scenery, colors, and composition."
+            # Craft specialized prompts for the vision model to optimize conciseness and image description
+            system_prompt = "You are a helpful AI assistant specializing in captioning images in a clear and concise manner."
+            user_prompt = "Caption this image concisely, you may include objects, people, scenery, colors, and composition to your response."
 
             logger.debug("Calling vision model for image captioning")
             result = ReplicateService.run_vision_model(
@@ -144,7 +148,7 @@ class ImageUtils:
             
             logger.info(f"Image captioning completed in {latency:.2f}s with {word_count} words")
 
-            user_message = "Please describe this image in detail."
+            user_message = "Create a concise caption for this image."
             history = [] if history is None else history
             return history + [[user_message, result]], metrics
 
@@ -195,8 +199,8 @@ class ImageUtils:
                 logger.error("Failed to convert image to base64")
                 return [[None, "Error processing the image."]], "Error: Metrics unavailable"
 
-            # Single comprehensive prompt for image summarization
-            prompt = "Analyze this image and provide a comprehensive contextual summary including objects, people, activities, environment, colors, and mood."
+            # Single comprehensive and concise prompt for image summarization
+            prompt = "Analyze this image and provide a concise contextual summary including objects, people, activities, environment, colors, and mood."
 
             logger.debug("Calling vision model for image summarization")
             result = ReplicateService.run_vision_model(prompt, image_base64=img_str)
@@ -208,7 +212,7 @@ class ImageUtils:
             
             logger.info(f"Image summarization completed in {latency:.2f}s with {word_count} words")
 
-            user_message = "Please provide a comprehensive summary of this image."
+            user_message = "Please provide a concise summary of this image."
             history = [] if history is None else history
             return history + [[user_message, result]], metrics
 

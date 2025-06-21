@@ -34,7 +34,7 @@ INIT_HISTORY = [
     ["Hello! Can you help me analyze an image?",
      "Of course! I'd be happy to help. You can upload an image using the Upload Image button below."],
     ["What kind of images can I upload?",
-     "You can upload most common image formats (JPG, PNG, etc.). Once uploaded, I can help you with:\n- Extracting text from the image\n- Generating image captions\n- Providing detailed image summaries\n I can also convert text to speech for you."],
+     "You can upload most common image formats (JPG, PNG, etc.). Once uploaded, I can help you with:\n- Extracting text from the image\n- Generating image captions\n- Providing accurate image summaries\n I can also convert text to speech for you.\n Please bear in mind that I can only process one image at a time and responses may be cut off around approximately 310 words due to API limitations."],
     ["That sounds great!",
      "Feel free to upload an image whenever you're ready. I'm here to help! 😊"]
 ]

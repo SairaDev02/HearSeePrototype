@@ -81,12 +81,9 @@
 
 ### 1.1 What is HearSee?
 
-HearSee is a powerful web application that combines vision AI and speech synthesis capabilities to provide an interactive experience for analyzing and discussing images with AI assistance. The application is built using Python with a Gradio-based web interface, leveraging state-of-the-art AI models through the Replicate API.
+HearSee is a powerful web application that combines vision AI and speech synthesis capabilities to provide an interactive experience for analyzing and discussing images with AI assistance. The application is built using Python with a Gradio-based web interface, leveraging lightweight AI models through the Replicate API.
 
 HearSee allows users to upload images and engage in natural conversations about their content, extract text from images, generate detailed image descriptions, and convert AI responses to natural-sounding speech with multiple voice options.
-
-> [!NOTE]
-> **Screenshot Placeholder**: *Main HearSee application interface showing the chat window, image upload area, and text-to-speech controls.*
 
 ### 1.2 Core Functionality
 
@@ -187,8 +184,6 @@ git clone https://github.com/yourusername/hearsee.git
 cd hearsee
 ```
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Terminal window showing the git clone command and output.*
 
 #### 2.2.2 Installing Dependencies
 
@@ -238,8 +233,6 @@ python app.py
 
 The application will initialize and start the Gradio web server.
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Terminal window showing the application startup with the local URL displayed.*
 
 #### 2.3.2 Accessing the Web Interface
 
@@ -284,9 +277,6 @@ The HearSee interface is designed to be intuitive and user-friendly. The main ap
 4. **Text-to-Speech Controls**: Options for voice selection and playback
 5. **Performance Metrics**: Displays information about processing time and response length
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Annotated screenshot of the main application interface with labeled components.*
-
 ### 3.2 Chat Interface
 
 The chat interface is the primary way to interact with HearSee:
@@ -306,9 +296,6 @@ The image upload area allows you to provide images for analysis:
 - **Image Display**: Shows the currently uploaded image
 - **Image Information**: Displays details about the image (format, size, etc.)
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Close-up of the image upload area showing the upload button and image display.*
-
 ### 3.4 Text-to-Speech Controls
 
 The text-to-speech controls allow you to hear AI responses:
@@ -324,23 +311,9 @@ The performance metrics area provides information about system performance:
 
 - **Latency**: Time taken to process your request and generate a response
 - **Word Count**: Number of words in the AI response
-- **Model Information**: Details about which AI models were used
-
-This information can be helpful for understanding system behavior and optimizing your usage.
-
-### 3.6 Help and Documentation Access
-
-HearSee includes built-in help and documentation:
-
-- **Help Button**: Opens a panel with basic usage instructions
-- **Documentation Link**: Provides access to this comprehensive documentation
-- **Tooltips**: Hover over interface elements to see brief explanations
-- **Contextual Help**: Click the "?" icon next to features for specific guidance
-- **Quick Start Guide**: Available from the main menu for new users
-- **Keyboard Shortcuts**: Press "H" to view available keyboard shortcuts
 
 > [!NOTE]
-> **Screenshot Placeholder**: *Help panel showing available documentation resources and tooltips.*
+> Each message has a copy button for saving text into the user's clipboard. You can also copy the entire conversation history by clicking the Copy button at the top-right corner of the chat interface.
 
 ---
 
@@ -390,8 +363,7 @@ To start a conversation about an image:
 3. Click "Submit" to send your message
 4. Wait for the AI to analyze the image and respond
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Example of a conversation about an uploaded image.*
+
 
 #### 4.2.2 Asking Effective Questions
 
@@ -432,8 +404,7 @@ To extract text from an image:
 2. Click the "Extract Text" button in the control panel
 3. The AI will process the image and return any text it identifies
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Example of text extraction from an image containing text.*
+
 
 #### 4.3.2 Optimizing Images for Text Extraction
 
@@ -469,8 +440,7 @@ To generate a caption:
 2. Click the "Caption Image" button
 3. The AI will analyze the image and generate a detailed caption
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Example of an image with its generated caption.*
+
 
 #### 4.4.2 Interpreting Caption Results
 
@@ -498,8 +468,7 @@ Summaries typically include:
 - Potential purpose or meaning of the image
 - Technical aspects like composition or style
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Example of an image with its generated summary.*
+
 
 #### 4.5.2 Detailed Analysis Examples
 
@@ -539,8 +508,7 @@ To use the TTS feature:
 3. Adjust the speech speed if desired
 4. Click the "Play Last Response" button
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Text-to-speech controls with voice selection dropdown and speed slider.*
+
 
 ### 5.2 Voice Selection
 
@@ -612,15 +580,11 @@ To play the generated speech:
 3. A progress indicator will show the current playback position
 4. Click the "Stop" button to end playback early if desired
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Audio player controls showing play/stop buttons and progress indicator.*
 
-#### 5.4.2 Saving Audio Files (if applicable)
 
-Currently, HearSee does not support saving generated speech as audio files in the standard version. The audio is generated for immediate playback only.
+#### 5.4.2 Saving Audio Files 
 
-> [!TIP]
-> If you need to save the audio, you can use your operating system's audio recording features to capture the playback.
+HearSee does support saving generated speech as .wav audio file by clicking on the download button after the audio is generated, located on the top-right side of the playback ui.
 
 ---
 
@@ -666,8 +630,7 @@ Complex images with multiple objects present both challenges and opportunities:
 - **Ask about relationships**: "How are these objects arranged?" or "What's the relationship between the person and the dog?"
 - **Request counting or enumeration**: "How many people are in this image?" or "List all the vehicles visible."
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Example of a complex image with multiple objects and a conversation about specific elements.*
+
 
 #### 6.2.2 Images with Text and Graphics
 
@@ -717,8 +680,7 @@ HearSee maintains your conversation history within a session:
 - **Context window**: The AI considers the recent conversation history when generating responses.
 - **Memory limitations**: Very long conversations may exceed the AI's context window, causing it to forget earlier messages.
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Conversation history showing multiple exchanges about an image.*
+
 
 #### 6.4.2 Starting New Sessions
 
@@ -775,8 +737,6 @@ Starting a new session is recommended when:
 3. Resize the image if it's too large
 4. Try uploading a different image
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Error message shown when an image upload fails, with highlighted troubleshooting options.*
 
 #### 7.1.3 Processing Errors
 
@@ -1144,8 +1104,6 @@ Example API interaction flow:
 3. Application polls the prediction status endpoint until processing is complete
 4. Application retrieves and displays the results
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Diagram showing the API interaction flow between HearSee and Replicate.*
 
 ### 11.2 Model Information
 
@@ -1210,8 +1168,6 @@ HearSee follows a modular architecture with clear separation of concerns:
   - `settings.py`: Application constants and defaults
   - `logging_config.py`: Logging system configuration
 
-> [!NOTE]
-> **Screenshot Placeholder**: *System architecture diagram showing the relationships between components.*
 
 ### 11.4 Logging System
 
@@ -1269,8 +1225,6 @@ These metrics are useful for:
 - Optimizing application settings
 - Troubleshooting issues
 
-> [!NOTE]
-> **Screenshot Placeholder**: *Performance metrics display showing latency and resource usage information.*
 
 ---
 
