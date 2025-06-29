@@ -97,6 +97,7 @@ class ChatInterface:
                     columns=2,  # Support for before/after comparisons
                     rows=1,
                     object_fit="scale-down",  # Maintains aspect ratio
+                    show_share_button= False
                 )
 
             # Text-to-Speech section header
